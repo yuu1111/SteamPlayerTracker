@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2024-06-23
+
+### Fixed
+- Improved release archive structure with proper folder naming
+- Excluded development scripts (release.js) from release packages
+- Added .env.example to release archives for easier user setup
+
+### Changed
+- Release archives now use consistent naming (steam-player-tracker-vX.X.X/)
+- Streamlined release packages to include only production-necessary files
+
 ## [1.1.0] - 2024-06-23
 
 ### Added
