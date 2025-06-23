@@ -20,6 +20,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
 
+**Release Management**: 
+- When creating releases, always update CHANGELOG.md and CHANGELOG-JP.md with proper version numbers
+- Move content from "Unreleased" sections to the actual version number (e.g., "## [1.1.3] - 2024-06-23")
+- Ensure CHANGELOGs reflect the released version, not unreleased content
+- Use conventional commit format for release commits and feature commits
+
 ## Development Commands
 
 ```bash

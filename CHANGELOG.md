@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
 
-## [Unreleased]
+## [1.1.3] - 2024-06-23
 
 ### Added
 - Dynamic window title updates on Windows showing game name and current player count
