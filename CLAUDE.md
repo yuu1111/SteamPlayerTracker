@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Language**: When working in this repository, communicate with users in Japanese. Keep this CLAUDE.md file in English.
 
-**Git Operations**: Only commit and push changes when explicitly requested by the user.
+**Git Operations**: 
+- ALWAYS ask for explicit user confirmation before running any git commit or git push commands
+- Never commit or push changes without user approval, even if the user asks to "complete the task" or similar
+- When ready to commit, present a summary of changes and ask: "これらの変更をコミット・プッシュしてもよろしいですか？"
 
 **Commit Message Format**: Use conventional commit format with appropriate prefixes:
 - `feat:` for new features
