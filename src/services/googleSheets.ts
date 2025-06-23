@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google, sheets_v4 } from 'googleapis';
 import { JWT } from 'google-auth-library';
 import { PlayerDataRecord } from '../types/config';
 
@@ -11,7 +11,7 @@ export interface DailyAverageSheetRecord {
 }
 
 export class GoogleSheetsService {
-  private sheets: any;
+  private sheets: sheets_v4.Sheets;
   private spreadsheetId: string;
   private sheetName: string;
 

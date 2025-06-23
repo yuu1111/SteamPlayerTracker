@@ -6,6 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Git Operations**: Only commit and push changes when explicitly requested by the user.
 
+**Commit Message Format**: Use conventional commit format with appropriate prefixes:
+- `feat:` for new features
+- `fix:` for bug fixes  
+- `docs:` for documentation updates
+- `style:` for formatting changes
+- `refactor:` for code refactoring
+- `test:` for adding tests
+- `chore:` for maintenance tasks
+
+Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
+
 ## Development Commands
 
 ```bash

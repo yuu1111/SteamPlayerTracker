@@ -101,7 +101,7 @@ export class DailyAverageService {
 
       return records;
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if (error && typeof error === 'object' && 'code' in error && (error as {code: string}).code === 'ENOENT') {
         return [];
       }
       throw error;
@@ -209,7 +209,7 @@ export class DailyAverageService {
           }
         }
       } catch (error) {
-        if ((error as any).code !== 'ENOENT') {
+        if (error && typeof error === 'object' && 'code' in error && (error as {code: string}).code !== 'ENOENT') {
           throw error;
         }
         // File doesn't exist yet, that's ok
