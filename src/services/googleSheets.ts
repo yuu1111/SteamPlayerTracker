@@ -1,7 +1,14 @@
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
 import { PlayerDataRecord } from '../types/config';
+
 import { promises as fs } from 'fs';
+
+export interface DailyAverageSheetRecord {
+  timestamp: string;
+  playerCount: number;
+  sampleCount: number;
+}
 
 export class GoogleSheetsService {
   private sheets: any;
@@ -73,6 +80,54 @@ export class GoogleSheetsService {
       if (error instanceof Error && error.message.includes('Unable to parse range')) {
         await this.createSheet();
         await this.ensureHeaderExists();
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  async appendDailyAverageRecord(record: DailyAverageSheetRecord): Promise<void> {
+    try {
+      await this.ensureDailyAverageHeaderExists();
+      
+      const values = [[record.timestamp, record.playerCount, record.sampleCount]];
+      
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: `${this.sheetName}!A:C`,
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: values,
+        },
+      });
+    } catch (error) {
+      throw new Error(`Failed to append daily average record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async ensureDailyAverageHeaderExists(): Promise<void> {
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${this.sheetName}!A1:C1`,
+      });
+
+      const values = response.data.values;
+      if (!values || values.length === 0 || values[0][0] !== 'date') {
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A1:C1`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [['date', 'average_player_count', 'sample_count']],
+          },
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Unable to parse range')) {
+        await this.createSheet();
+        await this.ensureDailyAverageHeaderExists();
       } else {
         throw error;
       }

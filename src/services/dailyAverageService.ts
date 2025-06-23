@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import { CsvWriter } from './csvWriter';
-import { GoogleSheetsService } from './googleSheets';
+import { GoogleSheetsService, DailyAverageSheetRecord } from './googleSheets';
 import { PlayerDataRecord } from '../types/config';
 import { Logger } from '../utils/logger';
 
@@ -111,16 +111,23 @@ export class DailyAverageService {
   private async saveAverageRecord(record: DailyAverageRecord): Promise<void> {
     const savePromises: Promise<void>[] = [];
 
-    // Save to CSV
-    const csvRecord = {
-      timestamp: record.date,
-      playerCount: record.averagePlayerCount
-    };
-    savePromises.push(this.csvWriter.writeRecord(csvRecord));
+    // Save to CSV with sample count
+    savePromises.push(
+      this.csvWriter.writeDailyAverageRecord(
+        record.date,
+        record.averagePlayerCount,
+        record.sampleCount
+      )
+    );
 
     // Save to Google Sheets if enabled
     if (this.googleSheets) {
-      savePromises.push(this.googleSheets.appendRecord(csvRecord));
+      const sheetsRecord = {
+        timestamp: record.date,
+        playerCount: record.averagePlayerCount,
+        sampleCount: record.sampleCount
+      };
+      savePromises.push(this.googleSheets.appendDailyAverageRecord(sheetsRecord));
     }
 
     await Promise.all(savePromises);

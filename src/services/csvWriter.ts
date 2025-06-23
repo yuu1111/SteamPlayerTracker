@@ -27,6 +27,24 @@ export class CsvWriter {
     }
   }
 
+  async writeDailyAverageRecord(date: string, averagePlayerCount: number, sampleCount: number): Promise<void> {
+    try {
+      await this.ensureDirectoryExists();
+      
+      const fileExists = await this.fileExists();
+      const csvLine = `${date},${averagePlayerCount},${sampleCount}\n`;
+
+      if (!fileExists) {
+        const header = 'date,average_player_count,sample_count\n';
+        await fs.writeFile(this.filePath, header + csvLine, 'utf8');
+      } else {
+        await fs.appendFile(this.filePath, csvLine, 'utf8');
+      }
+    } catch (error) {
+      throw new Error(`Failed to write daily average CSV record: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   private async fileExists(): Promise<boolean> {
     try {
       await fs.access(this.filePath);
