@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2024-06-23
+
+### Fixed
+- Modernized and optimized ESLint configuration for faster execution (35s → 15s)
+- Updated TypeScript ESLint plugin and parser to v7.18.0
+- Upgraded rimraf to v6.0.1 to resolve deprecation warnings
+- Fixed Google Sheets API calls to use correct requestBody parameter
+- Added timeout to release script commands to prevent hanging
+
+### Performance Improvements
+- Removed TypeScript project parsing from ESLint for significant speed improvement
+- Streamlined ESLint rules to essential checks only
+- Excluded scripts directory from ESLint to prevent unnecessary checks
+
+### Technical Debt
+- Resolved deprecated package warnings (inflight, config-array, etc.)
+- Improved CI/CD pipeline performance while maintaining code quality
+
 ## [1.1.1] - 2024-06-23
 
 ### Fixed
