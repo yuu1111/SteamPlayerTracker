@@ -10,7 +10,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npm run release:*)"
+      "Bash(npm run release:*)",
+      "Bash(timeout 30s npm run lint)",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }
