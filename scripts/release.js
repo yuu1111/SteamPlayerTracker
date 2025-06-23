@@ -76,12 +76,20 @@ function main() {
   // TypeScript型チェック
   runCommand('npm run typecheck', 'TypeScript型チェック');
   
-  // ESLintスキップ（設定ファイルがない場合）
+  // ESLint実行（警告は許可）
   if (!skipTests) {
     try {
-      runCommand('npm run lint', 'ESLint静的解析');
+      console.log('\n🔄 ESLint静的解析...');
+      execSync('npm run lint', { stdio: 'inherit' });
+      console.log('✅ ESLint静的解析 完了（警告は許可）');
     } catch (error) {
-      console.log('⚠️  ESLint設定が見つからないため、スキップします');
+      // ESLintで警告のみの場合は続行（エラーコード1）
+      if (error.status === 1) {
+        console.log('⚠️  ESLintで警告が検出されましたが、続行します');
+      } else {
+        console.error('❌ ESLint静的解析 失敗:', error.message);
+        process.exit(1);
+      }
     }
   }
   

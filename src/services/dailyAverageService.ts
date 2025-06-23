@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import { CsvWriter } from './csvWriter';
-import { GoogleSheetsService, DailyAverageSheetRecord } from './googleSheets';
+import { GoogleSheetsService } from './googleSheets';
 import { PlayerDataRecord } from '../types/config';
 import { Logger } from '../utils/logger';
 
