@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2024-06-23
+
 ### Added
 - Automated release management system with GitHub Actions
 - ESLint configuration for code quality
@@ -17,17 +19,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automated release workflow that creates GitHub releases with artifacts
 - English and Japanese documentation (README.md and README-JP.md)
 - Changelog documentation in both languages
+- Conventional commit message format guidelines in CLAUDE.md
 
 ### Changed
 - Updated package.json with new release-related npm scripts
 - Enhanced README with release management instructions
 - Improved project documentation structure
 
+### Fixed
+- Resolved all ESLint warnings with proper TypeScript types
+- Fixed error handling in dailyAverageService.ts
+- Improved type safety in GoogleSheetsService and Logger
+
 ### Technical Improvements
 - Added automated type checking and linting in release process
 - Implemented tar.gz and zip artifact generation for releases
 - Set up proper Node.js version matrix testing (18, 20)
 - Added startup validation in CI pipeline
+- Enhanced release workflow to include changelog content in GitHub releases
 
 ## [1.0.0] - Initial Release
 

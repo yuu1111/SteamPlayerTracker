@@ -36,19 +36,22 @@ jobs:
         
       - name: Create Release Archive
         run: |
-          mkdir -p release-package
-          cp -r dist/ release-package/
-          cp package.json release-package/
-          cp package-lock.json release-package/
-          cp README.md release-package/
-          cp README-JP.md release-package/
-          cp CHANGELOG.md release-package/
-          cp CHANGELOG-JP.md release-package/
-          cp LICENCE.txt release-package/
-          cp -r scripts/ release-package/
-          cp *.sh *.bat *.ps1 release-package/ 2>/dev/null || true
-          tar -czf steam-player-tracker-${{ github.ref_name }}.tar.gz -C release-package .
-          zip -r steam-player-tracker-${{ github.ref_name }}.zip release-package/
+          # Create directory with proper name for archives
+          ARCHIVE_NAME="steam-player-tracker-${{ github.ref_name }}"
+          mkdir -p "${ARCHIVE_NAME}"
+          cp -r dist/ "${ARCHIVE_NAME}/"
+          cp package.json "${ARCHIVE_NAME}/"
+          cp package-lock.json "${ARCHIVE_NAME}/"
+          cp README.md "${ARCHIVE_NAME}/"
+          cp README-JP.md "${ARCHIVE_NAME}/"
+          cp CHANGELOG.md "${ARCHIVE_NAME}/"
+          cp CHANGELOG-JP.md "${ARCHIVE_NAME}/"
+          cp LICENCE.txt "${ARCHIVE_NAME}/"
+          cp *.sh *.bat *.ps1 "${ARCHIVE_NAME}/" 2>/dev/null || true
+          # Copy .env.example if it exists
+          cp .env.example "${ARCHIVE_NAME}/" 2>/dev/null || true
+          tar -czf "${ARCHIVE_NAME}.tar.gz" "${ARCHIVE_NAME}"/
+          zip -r "${ARCHIVE_NAME}.zip" "${ARCHIVE_NAME}"/
         
       - name: Extract version from tag
         id: get_version
