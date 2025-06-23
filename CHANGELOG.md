@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 **Date Format:** All dates are in JST (Japan Standard Time)
 
-## [1.1.4] - 2025-06-24 JST
+## [X.X.X] - 2025-06-24 JST
 
 ### Added
 - Improved window titles for setup.bat/setup.ps1 scripts to show "Setting up..." status
