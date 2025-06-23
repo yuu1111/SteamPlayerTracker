@@ -5,9 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
+**Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
+**Date Format:** All dates are in JST (Japan Standard Time)
 
-## [1.1.3] - 2024-06-23
+## [1.1.3] - 2024-06-24 JST
 
 ### Added
 - Dynamic window title updates on Windows showing game name and current player count
@@ -18,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced startup scripts to show "Starting..." before application takes over title
 - Window title now updates in real-time with latest player count data
 
-## [1.1.2] - 2024-06-23
+## [1.1.2] - 2024-06-24 JST
 
 ### Fixed
 - Modernized and optimized ESLint configuration for faster execution (35s → 15s)
@@ -36,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved deprecated package warnings (inflight, config-array, etc.)
 - Improved CI/CD pipeline performance while maintaining code quality
 
-## [1.1.1] - 2024-06-23
+## [1.1.1] - 2024-06-24 JST
 
 ### Fixed
 - Improved release archive structure with proper folder naming
