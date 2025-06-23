@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
 
-## [Unreleased]
-
 ## [1.1.2] - 2024-06-23
 
 ### Fixed

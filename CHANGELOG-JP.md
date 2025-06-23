@@ -7,8 +7,6 @@
 
 **言語:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
 
-## [未リリース]
-
 ## [1.1.2] - 2024-06-23
 
 ### 修正
