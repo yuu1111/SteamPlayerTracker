@@ -11,7 +11,7 @@ export interface DailyAverageSheetRecord {
 }
 
 export class GoogleSheetsService {
-  private sheets: sheets_v4.Sheets;
+  private sheets!: sheets_v4.Sheets;
   private spreadsheetId: string;
   private sheetName: string;
 
@@ -49,7 +49,7 @@ export class GoogleSheetsService {
         range: `${this.sheetName}!A:B`,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
-        resource: {
+        requestBody: {
           values: values,
         },
       });
@@ -71,7 +71,7 @@ export class GoogleSheetsService {
           spreadsheetId: this.spreadsheetId,
           range: `${this.sheetName}!A1:B1`,
           valueInputOption: 'RAW',
-          resource: {
+          requestBody: {
             values: [['timestamp', 'player_count']],
           },
         });
@@ -97,7 +97,7 @@ export class GoogleSheetsService {
         range: `${this.sheetName}!A:C`,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
-        resource: {
+        requestBody: {
           values: values,
         },
       });
@@ -119,7 +119,7 @@ export class GoogleSheetsService {
           spreadsheetId: this.spreadsheetId,
           range: `${this.sheetName}!A1:C1`,
           valueInputOption: 'RAW',
-          resource: {
+          requestBody: {
             values: [['date', 'average_player_count', 'sample_count']],
           },
         });
@@ -138,7 +138,7 @@ export class GoogleSheetsService {
     try {
       await this.sheets.spreadsheets.batchUpdate({
         spreadsheetId: this.spreadsheetId,
-        resource: {
+        requestBody: {
           requests: [{
             addSheet: {
               properties: {
