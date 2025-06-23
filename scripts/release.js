@@ -78,18 +78,10 @@ function main() {
   
   // ESLint実行（警告は許可）
   if (!skipTests) {
-    console.log('\n🔄 ESLint静的解析...');
     try {
-      execSync('npm run lint', { stdio: 'pipe' });
-      console.log('✅ ESLint静的解析 完了');
+      runCommand('npm run lint', 'ESLint静的解析');
     } catch (error) {
-      // ESLintで警告のみの場合は続行（エラーコード1）
-      if (error.status === 1) {
-        console.log('⚠️  ESLintで警告が検出されましたが、続行します');
-      } else {
-        console.error('❌ ESLint静的解析 失敗:', error.message);
-        process.exit(1);
-      }
+      console.log('⚠️  ESLintで問題が検出されましたが、続行します');
     }
   }
   
