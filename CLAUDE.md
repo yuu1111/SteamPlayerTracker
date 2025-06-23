@@ -22,11 +22,11 @@ Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
 
 **Release Management**: 
 - When creating releases, always update CHANGELOG.md and CHANGELOG-JP.md with proper version numbers
-- Move content from "Unreleased" sections to the actual version number (e.g., "## [1.1.3] - 2024-06-24 JST")
+- Move content from "Unreleased" sections to the actual version number (e.g., "## [1.1.3] - 2025-06-24 JST")
 - Ensure CHANGELOGs reflect the released version, not unreleased content
 - Use conventional commit format for release commits and feature commits
 - **IMPORTANT**: All dates in CHANGELOGs must be in JST (Japan Standard Time) format
-- Date format: "YYYY-MM-DD JST" (e.g., "2024-06-24 JST")
+- Date format: "YYYY-MM-DD JST" (e.g., "2025-06-24 JST")
 
 ## Development Commands
 
