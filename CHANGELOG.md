@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
 
+## [Unreleased]
+
+### Added
+- Dynamic window title updates on Windows showing game name and current player count
+- Game name detection from Steam Store API for enhanced user experience
+- Improved window title progression (Starting... → Game Name → Game Name: X players)
+
+### Changed
+- Enhanced startup scripts to show "Starting..." before application takes over title
+- Window title now updates in real-time with latest player count data
+
 ## [1.1.2] - 2024-06-23
 
 ### Fixed

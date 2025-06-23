@@ -3,6 +3,7 @@ import { SteamApiResponse } from '../types/config';
 
 export class SteamApiService {
   private baseUrl = 'https://api.steampowered.com';
+  private storeBaseUrl = 'https://store.steampowered.com';
 
   async getCurrentPlayerCount(appId: number): Promise<number> {
     const url = `${this.baseUrl}/ISteamUserStats/GetNumberOfCurrentPlayers/v1/`;
@@ -38,6 +39,30 @@ export class SteamApiService {
         }
       }
       throw error;
+    }
+  }
+
+  async getGameName(appId: number): Promise<string | null> {
+    const url = `${this.storeBaseUrl}/api/appdetails`;
+    
+    try {
+      const response = await axios.get(url, {
+        params: {
+          appids: appId,
+          filters: 'basic',
+        },
+        timeout: 10000,
+      });
+
+      const gameData = response.data?.[appId];
+      if (gameData?.success && gameData?.data?.name) {
+        return gameData.data.name;
+      }
+      
+      return null;
+    } catch (error) {
+      // ゲーム名取得失敗は致命的ではないため、nullを返す
+      return null;
     }
   }
 }

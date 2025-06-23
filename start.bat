@@ -1,7 +1,7 @@
 @echo off
 REM Steam Player Tracker Start Script for Windows
 
-title Steam Player Tracker - Running
+title Steam Player Tracker - Starting...
 
 REM Check if pwsh is installed
 where pwsh >nul 2>&1

@@ -15,7 +15,8 @@
       "Bash(npx eslint:*)",
       "Bash(rm:*)",
       "Bash(npm install:*)",
-      "Bash(time npm run lint)"
+      "Bash(time npm run lint)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

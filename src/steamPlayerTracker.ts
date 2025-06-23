@@ -17,6 +17,7 @@ export class SteamPlayerTracker {
   private scheduler: Scheduler;
   private retryHandler: RetryHandler;
   private logger: Logger;
+  private gameName?: string;
 
   constructor() {
     this.logger = new Logger(config.logging.level, config.logging.filePath);
@@ -53,6 +54,22 @@ export class SteamPlayerTracker {
     }
   }
 
+  private updateWindowTitle(playerCount?: number): void {
+    if (process.platform !== 'win32') return;
+    
+    let title = 'Steam Player Tracker';
+    
+    if (this.gameName && playerCount !== undefined) {
+      title += ` - ${this.gameName}: ${playerCount.toLocaleString()} players`;
+    } else if (this.gameName) {
+      title += ` - ${this.gameName}`;
+    } else {
+      title += ' - Running';
+    }
+    
+    process.title = title;
+  }
+
   async start(): Promise<void> {
     try {
       this.logger.info('Steam Player Tracker starting...', {
@@ -63,6 +80,18 @@ export class SteamPlayerTracker {
       });
 
       await this.validateConfiguration();
+      
+      // Try to get game name for better window title
+      try {
+        const gameName = await this.steamApi.getGameName(config.steam.appId);
+        if (gameName) {
+          this.gameName = gameName;
+          this.logger.info(`Detected game: ${this.gameName}`);
+          this.updateWindowTitle();
+        }
+      } catch (error) {
+        this.logger.warn('Failed to get game name', { error: error instanceof Error ? error.message : String(error) });
+      }
       
       // Collect data immediately on startup
       this.logger.info('Collecting initial data on startup...');
@@ -129,6 +158,9 @@ export class SteamPlayerTracker {
         () => this.steamApi.getCurrentPlayerCount(config.steam.appId),
         'Steam API data collection'
       );
+
+      // Update window title with current player count
+      this.updateWindowTitle(playerCount);
 
       const record: PlayerDataRecord = {
         timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
