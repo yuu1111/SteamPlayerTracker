@@ -9,7 +9,7 @@ const packageJsonPath = path.join(__dirname, '..', 'package.json');
 function runCommand(command, description) {
   console.log(`\n🔄 ${description}...`);
   try {
-    execSync(command, { stdio: 'inherit' });
+    execSync(command, { stdio: 'inherit', timeout: 60000 }); // 60秒タイムアウト
     console.log(`✅ ${description} 完了`);
   } catch (error) {
     console.error(`❌ ${description} 失敗:`, error.message);
