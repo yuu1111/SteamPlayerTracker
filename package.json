@@ -12,7 +12,13 @@
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "calculate-daily-averages": "ts-node src/tools/calculateAllDailyAverages.ts",
-    "setup": "npm install && npm run build"
+    "setup": "npm install && npm run build",
+    "release": "node scripts/release.js",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major",
+    "prerelease": "npm run test:ci",
+    "test:ci": "npm run typecheck && npm run lint",
+    "prepare-release": "npm run clean && npm run build && npm run test:ci"
   },
   "keywords": [
     "steam",

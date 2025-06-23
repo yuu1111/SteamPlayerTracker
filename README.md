@@ -1,29 +1,31 @@
 # SteamPlayerTracker
 
-SteamPlayerTracker は、指定されたSteamゲームの現在の同時接続数（プレイヤー数）を定期的に取得し、そのデータをCSV形式で記録するアプリケーションです。オプションでGoogleスプレッドシートへの連携機能も提供します。
+**Languages:** [English](README.md) | [日本語](README-JP.md)
 
-## 機能
+SteamPlayerTracker is an application that periodically retrieves the current concurrent player count of specified Steam games and records the data in CSV format. It also provides optional Google Sheets integration functionality.
 
-- 🎮 **Steam Web API からのプレイヤー数取得**: 指定したゲームの現在のプレイヤー数を自動取得
-- 📊 **CSV形式での記録**: タイムスタンプ付きでプレイヤー数をCSVファイルに保存
-- 📈 **日次平均の自動計算**: 1日ごとの平均プレイヤー数を別ファイルに記録（0を除外）
-- 📋 **Googleスプレッドシート連携**: オプションでスプレッドシートに直接データを書き込み
-- ⏰ **柔軟なスケジューリング**: 任意の分指定で定期実行
-- 🔄 **エラーハンドリング・リトライ機能**: 指数関数的バックオフによる自動リトライ
-- 📝 **詳細なロギング**: ログレベル管理・ローテーション対応
-- 🛡️ **型安全性**: TypeScript による型チェック
-- 🚀 **起動時の即座データ取得**: スクリプト開始時に現在のプレイヤー数を取得
-- 📊 **未計算の日次平均を自動補完**: 起動時に過去の未計算分を自動計算
+## Features
 
-## 必要な環境
+- 🎮 **Steam Web API Player Count Retrieval**: Automatically fetches current player count for specified games
+- 📊 **CSV Format Recording**: Saves player count data to CSV files with timestamps
+- 📈 **Automatic Daily Average Calculation**: Records daily average player counts in separate files (excluding zeros)
+- 📋 **Google Sheets Integration**: Optional direct data writing to spreadsheets
+- ⏰ **Flexible Scheduling**: Periodic execution with customizable minute intervals
+- 🔄 **Error Handling & Retry Functionality**: Automatic retry with exponential backoff
+- 📝 **Detailed Logging**: Log level management with rotation support
+- 🛡️ **Type Safety**: TypeScript type checking
+- 🚀 **Immediate Data Collection on Startup**: Fetches current player count when script starts
+- 📊 **Automatic Daily Average Backfill**: Automatically calculates missing daily averages on startup
 
-- Node.js 18.x 以上
-- (Windows) PowerShell Core (pwsh) - [https://aka.ms/PSWindows](https://aka.ms/PSWindows) からインストール
-- (オプション) Google Cloud Platform アカウント（スプレッドシート連携時）
+## Requirements
 
-## セットアップ
+- Node.js 18.x or higher
+- (Windows) PowerShell Core (pwsh) - Install from [https://aka.ms/PSWindows](https://aka.ms/PSWindows)
+- (Optional) Google Cloud Platform account (for spreadsheet integration)
 
-### クイックセットアップ（推奨）
+## Setup
+
+### Quick Setup (Recommended)
 
 **Windows:**
 ```batch
@@ -35,9 +37,9 @@ setup.bat
 ./setup.sh
 ```
 
-### 手動セットアップ
+### Manual Setup
 
-#### 1. プロジェクトのクローンと依存関係のインストール
+#### 1. Clone Project and Install Dependencies
 
 ```bash
 git clone <repository-url>
@@ -45,15 +47,15 @@ cd SteamPlayerTracker
 npm install
 ```
 
-#### 2. 環境変数の設定
+#### 2. Environment Configuration
 
-`.env.example` を `.env` にコピーして設定してください：
+Copy `.env.example` to `.env` and configure:
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` ファイルを編集：
+Edit the `.env` file:
 
 ```env
 # Steam Settings
@@ -65,9 +67,9 @@ CSV_FILE_PATH=steam_concurrent_players.csv
 DAILY_AVERAGE_CSV_ENABLED=true
 DAILY_AVERAGE_CSV_FILE_PATH=steam_daily_averages.csv
 
-# Scheduling Settings (分を指定: カンマ区切り)
+# Scheduling Settings (specify minutes: comma-separated)
 COLLECTION_MINUTES=0,30
-# 日次平均を計算する時刻 (0-23)
+# Hour to calculate daily averages (0-23)
 DAILY_AVERAGE_HOUR=0
 
 # Retry Settings
@@ -86,76 +88,100 @@ GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME=DailyAverages
 GOOGLE_SERVICE_ACCOUNT_KEY_PATH=
 ```
 
-#### 3. ゲームIDの確認
+#### 3. Finding Game IDs
 
-Steam ストアページのURLからApp IDを確認できます：
-- 例: `https://store.steampowered.com/app/730/` → App ID は `730` (Counter-Strike 2)
+You can find App IDs from Steam store page URLs:
+- Example: `https://store.steampowered.com/app/730/` → App ID is `730` (Counter-Strike 2)
 
-## 使用方法
+## Usage
 
-### クイックスタート（Windows）
+### Quick Start (Windows)
 
 ```batch
-# ビルドのみ
+# Build only
 build.bat
 
-# ビルドして起動
+# Build and start
 start.bat
 ```
 
-### クイックスタート（Linux/macOS）
+### Quick Start (Linux/macOS)
 
 ```bash
-# ビルドのみ
+# Build only
 ./build.sh
 
-# ビルドして起動
+# Build and start
 ./start.sh
 ```
 
-### 開発環境での実行
+### Development Environment
 
 ```bash
 npm run dev
 ```
 
-### 本番環境での実行
+### Production Environment
 
 ```bash
 npm run build
 npm start
 ```
 
-### 日次平均の手動計算
+### Manual Daily Average Calculation
 
-過去のデータから全ての日次平均を計算：
+Calculate all daily averages from historical data:
 
 ```bash
 npm run calculate-daily-averages
 ```
 
-### バックグラウンド実行（Linux/Mac）
+### Background Execution (Linux/Mac)
 
 ```bash
 nohup npm start > output.log 2>&1 &
 ```
 
-### Windows でのバックグラウンド実行
+### Windows Background Execution
 
 ```bash
 # PowerShell
 Start-Process npm -ArgumentList "start" -WindowStyle Hidden
 ```
 
-## Googleスプレッドシート連携（オプション）
+## Release Management
 
-### 1. Google Cloud Platform 設定
+### Automated Release
 
-1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成
-2. Google Sheets API を有効化
-3. サービスアカウントを作成してキーファイル（JSON）をダウンロード
+```bash
+npm run release          # Patch release (1.0.0 → 1.0.1)
+npm run release:minor    # Minor release (1.0.0 → 1.1.0)
+npm run release:major    # Major release (1.0.0 → 2.0.0)
+```
 
-### 2. 環境変数設定
+The release script automatically:
+- Runs type checking and linting
+- Builds the application
+- Updates version in package.json
+- Creates Git commit and tag
+- Prepares for GitHub Actions deployment
+
+### GitHub Actions
+
+After running the release script locally:
+1. `git push origin main`
+2. `git push origin v1.0.1` (push the created tag)
+3. GitHub Actions automatically creates release artifacts
+
+## Google Sheets Integration (Optional)
+
+### 1. Google Cloud Platform Setup
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable Google Sheets API
+3. Create a service account and download the key file (JSON)
+
+### 2. Environment Configuration
 
 ```env
 GOOGLE_SHEETS_ENABLED=true
@@ -165,118 +191,118 @@ GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME=DailyAverages
 GOOGLE_SERVICE_ACCOUNT_KEY_PATH=path/to/service-account-key.json
 ```
 
-### 3. スプレッドシート共有
+### 3. Spreadsheet Sharing
 
-作成したスプレッドシートをサービスアカウントのメールアドレスと共有してください。
+Share the created spreadsheet with the service account email address.
 
-## 設定オプション
+## Configuration Options
 
-| 設定項目 | 説明 | デフォルト値 |
-|---------|------|-------------|
-| `STEAM_APP_ID` | 追跡するゲームのApp ID | 必須 |
-| `CSV_OUTPUT_ENABLED` | CSV出力の有効/無効 | `true` |
-| `CSV_FILE_PATH` | CSV出力ファイルパス | `steam_concurrent_players.csv` |
-| `DAILY_AVERAGE_CSV_ENABLED` | 日次平均CSV出力の有効/無効 | `true` |
-| `DAILY_AVERAGE_CSV_FILE_PATH` | 日次平均CSV出力ファイルパス | `steam_daily_averages.csv` |
-| `COLLECTION_MINUTES` | データ取得する分（カンマ区切り） | `0,30` |
-| `DAILY_AVERAGE_HOUR` | 日次平均を計算する時刻（0-23） | `0` |
-| `MAX_RETRIES` | 最大リトライ回数 | `3` |
-| `RETRY_BASE_DELAY` | リトライ基本遅延時間（ms） | `1000` |
-| `LOG_LEVEL` | ログレベル（debug/info/warn/error） | `info` |
-| `LOG_FILE_PATH` | ログファイルパス | `logs/steam-tracker.log` |
+| Setting | Description | Default Value |
+|---------|-------------|---------------|
+| `STEAM_APP_ID` | App ID of the game to track | Required |
+| `CSV_OUTPUT_ENABLED` | Enable/disable CSV output | `true` |
+| `CSV_FILE_PATH` | CSV output file path | `steam_concurrent_players.csv` |
+| `DAILY_AVERAGE_CSV_ENABLED` | Enable/disable daily average CSV output | `true` |
+| `DAILY_AVERAGE_CSV_FILE_PATH` | Daily average CSV output file path | `steam_daily_averages.csv` |
+| `COLLECTION_MINUTES` | Minutes to collect data (comma-separated) | `0,30` |
+| `DAILY_AVERAGE_HOUR` | Hour to calculate daily averages (0-23) | `0` |
+| `MAX_RETRIES` | Maximum retry attempts | `3` |
+| `RETRY_BASE_DELAY` | Base retry delay (ms) | `1000` |
+| `LOG_LEVEL` | Log level (debug/info/warn/error) | `info` |
+| `LOG_FILE_PATH` | Log file path | `logs/steam-tracker.log` |
 
-## CSVファイル構造
+## CSV File Structure
 
-### メインデータファイル
+### Main Data File
 ```csv
 timestamp,player_count
 2024-06-23 10:00:00,12345
 2024-06-23 10:30:00,13456
 ```
 
-### 日次平均ファイル
+### Daily Average File
 ```csv
 timestamp,player_count
 2024-06-22,12890
 2024-06-23,13245
 ```
 
-**注意**: 日次平均計算時、プレイヤー数が0のデータは除外されます（API取得失敗とみなすため）。
+**Note**: When calculating daily averages, data with 0 player count is excluded (considered API fetch failures).
 
-## トラブルシューティング
+## Troubleshooting
 
-### よくある問題
+### Common Issues
 
-1. **Steam API エラー**
-   - App IDが有効か確認
-   - ネットワーク接続を確認
+1. **Steam API Errors**
+   - Verify App ID is valid
+   - Check network connectivity
 
-2. **ファイル書き込みエラー**
-   - ディスクの空き容量を確認
-   - ファイル・ディレクトリの権限を確認
+2. **File Write Errors**
+   - Check disk space
+   - Verify file/directory permissions
 
-3. **Googleスプレッドシートエラー**
-   - サービスアカウントキーファイルのパスが正しいか確認
-   - スプレッドシートIDが正しいか確認
-   - スプレッドシートがサービスアカウントと共有されているか確認
+3. **Google Sheets Errors**
+   - Verify service account key file path
+   - Check spreadsheet ID
+   - Ensure spreadsheet is shared with service account
 
-### ログの確認
+### Log Checking
 
 ```bash
-# ログファイルの確認
+# View log file
 tail -f logs/steam-tracker.log
 
-# エラーのみフィルタ
+# Filter errors only
 grep "ERROR" logs/steam-tracker.log
 ```
 
-## 開発者向け
+## Development
 
-### スクリプト
+### Scripts
 
 ```bash
-npm run build      # TypeScriptをコンパイル
-npm run dev        # 開発モードで実行
-npm run watch      # ファイル変更を監視してコンパイル
-npm run clean      # distディレクトリをクリア
-npm run lint       # ESLintによる静的解析
-npm run typecheck  # TypeScriptの型チェック
-npm run calculate-daily-averages  # 全日次平均を計算
+npm run build      # Compile TypeScript
+npm run dev        # Run in development mode
+npm run watch      # Watch files and compile
+npm run clean      # Clear dist directory
+npm run lint       # ESLint static analysis
+npm run typecheck  # TypeScript type checking
+npm run calculate-daily-averages  # Calculate all daily averages
 ```
 
-### 起動スクリプト
+### Platform Scripts
 
-| ファイル | 説明 | プラットフォーム |
-|---------|------|------------------|
-| `setup.bat` | 初回セットアップ用バッチファイル | Windows |
-| `build.bat` | ビルド用バッチファイル | Windows |
-| `start.bat` | 起動用バッチファイル | Windows |
-| `setup.ps1` | 初回セットアップ用PowerShell Coreスクリプト | Windows |
-| `build.ps1` | ビルド用PowerShell Coreスクリプト | Windows |
-| `start.ps1` | 起動用PowerShell Coreスクリプト | Windows |
-| `setup.sh` | 初回セットアップ用シェルスクリプト | Linux/macOS |
-| `build.sh` | ビルド用シェルスクリプト | Linux/macOS |
-| `start.sh` | 起動用シェルスクリプト | Linux/macOS |
+| File | Description | Platform |
+|------|-------------|----------|
+| `setup.bat` | Initial setup batch file | Windows |
+| `build.bat` | Build batch file | Windows |
+| `start.bat` | Start batch file | Windows |
+| `setup.ps1` | Initial setup PowerShell Core script | Windows |
+| `build.ps1` | Build PowerShell Core script | Windows |
+| `start.ps1` | Start PowerShell Core script | Windows |
+| `setup.sh` | Initial setup shell script | Linux/macOS |
+| `build.sh` | Build shell script | Linux/macOS |
+| `start.sh` | Start shell script | Linux/macOS |
 
-### ディレクトリ構造
+### Directory Structure
 
 ```
 src/
-├── config/          # 設定管理
-├── services/        # 各種サービス
+├── config/          # Configuration management
+├── services/        # Various services
 │   ├── csvWriter.ts
 │   ├── dailyAverageService.ts
 │   ├── googleSheets.ts
 │   ├── scheduler.ts
 │   └── steamApi.ts
-├── tools/           # コマンドラインツール
+├── tools/           # Command-line tools
 │   └── calculateAllDailyAverages.ts
-├── types/           # 型定義
-├── utils/           # ユーティリティ
-├── steamPlayerTracker.ts  # メインクラス
-└── index.ts         # エントリーポイント
+├── types/           # Type definitions
+├── utils/           # Utilities
+├── steamPlayerTracker.ts  # Main class
+└── index.ts         # Entry point
 ```
 
-## ライセンス
+## License
 
 MIT License

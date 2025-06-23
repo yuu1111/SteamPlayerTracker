@@ -8,7 +8,9 @@
       "Bash(chmod:*)",
       "Bash(npm run lint)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm run release:*)"
     ],
     "deny": []
   }

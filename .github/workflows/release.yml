@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run type check
+        run: npm run typecheck
+        
+      - name: Run linter
+        run: npm run lint
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Create Release Archive
+        run: |
+          mkdir -p release-package
+          cp -r dist/ release-package/
+          cp package.json release-package/
+          cp package-lock.json release-package/
+          cp README.md release-package/
+          cp README-JP.md release-package/
+          cp CHANGELOG.md release-package/
+          cp CHANGELOG-JP.md release-package/
+          cp LICENCE.txt release-package/
+          cp -r scripts/ release-package/
+          cp *.sh *.bat *.ps1 release-package/ 2>/dev/null || true
+          tar -czf steam-player-tracker-${{ github.ref_name }}.tar.gz -C release-package .
+          zip -r steam-player-tracker-${{ github.ref_name }}.zip release-package/
+        
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🚀 Steam Player Tracker v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          
+          # Extract version-specific changes from CHANGELOG.md
+          if [ -f "CHANGELOG.md" ]; then
+            echo "### 📝 Changes in this version" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            # Extract unreleased section if this is the first release of those changes
+            awk '/^## \[Unreleased\]/{flag=1; next} /^## \[/{flag=0} flag && /^### /{print "#### " substr($0,5)} flag && /^- /{print $0}' CHANGELOG.md >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "### 📦 Downloads" >> $GITHUB_OUTPUT
+          echo "- \`steam-player-tracker-${{ github.ref_name }}.tar.gz\` - For Linux/macOS" >> $GITHUB_OUTPUT
+          echo "- \`steam-player-tracker-${{ github.ref_name }}.zip\` - For Windows" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 🔧 Installation" >> $GITHUB_OUTPUT
+          echo "1. Download and extract the archive" >> $GITHUB_OUTPUT
+          echo "2. Create and configure \`.env\` file" >> $GITHUB_OUTPUT
+          echo "3. Run \`npm install\` to install dependencies" >> $GITHUB_OUTPUT
+          echo "4. Run \`npm start\` to start the application" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📋 Requirements" >> $GITHUB_OUTPUT
+          echo "- Node.js 18.0.0 or higher" >> $GITHUB_OUTPUT
+          echo "- npm" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📖 Documentation" >> $GITHUB_OUTPUT
+          echo "For setup and usage instructions, see [README.md](README.md) (English) or [README-JP.md](README-JP.md) (日本語)." >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "For complete change history, see [CHANGELOG.md](CHANGELOG.md) (English) or [CHANGELOG-JP.md](CHANGELOG-JP.md) (日本語)." >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Steam Player Tracker ${{ github.ref_name }}"
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          files: |
+            steam-player-tracker-${{ github.ref_name }}.tar.gz
+            steam-player-tracker-${{ github.ref_name }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
