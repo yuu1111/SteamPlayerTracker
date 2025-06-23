@@ -2,7 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**言語**: このリポジトリで作業する際は、ユーザーとのコミュニケーションは日本語で行ってください。
+**Language**: When working in this repository, communicate with users in Japanese. Keep this CLAUDE.md file in English.
+
+**Git Operations**: Only commit and push changes when explicitly requested by the user.
 
 ## Development Commands
 
