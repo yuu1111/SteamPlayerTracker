@@ -78,10 +78,10 @@ function main() {
   
   // ESLint実行（警告は許可）
   if (!skipTests) {
+    console.log('\n🔄 ESLint静的解析...');
     try {
-      console.log('\n🔄 ESLint静的解析...');
-      execSync('npm run lint', { stdio: 'inherit' });
-      console.log('✅ ESLint静的解析 完了（警告は許可）');
+      execSync('npm run lint', { stdio: 'pipe' });
+      console.log('✅ ESLint静的解析 完了');
     } catch (error) {
       // ESLintで警告のみの場合は続行（エラーコード1）
       if (error.status === 1) {
