@@ -20,6 +20,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
 
+**Commit Organization**: 
+- When multiple files are changed, split commits logically by functionality or purpose
+- Avoid large monolithic commits that combine unrelated changes
+- Group related file changes together (e.g., source code + tests, documentation updates, configuration changes)
+- Separate functional changes from documentation/formatting changes
+- Each commit should represent a single logical unit of work
+
 **Release Management**: 
 - When creating releases, always update CHANGELOG.md and CHANGELOG-JP.md with proper version numbers
 - Move content from "Unreleased" sections to the actual version number (e.g., "## [1.1.3] - 2025-06-24 JST")
