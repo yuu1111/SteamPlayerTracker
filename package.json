@@ -10,7 +10,9 @@
     "watch": "tsc --watch",
     "clean": "rimraf dist",
     "lint": "eslint src/**/*.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "calculate-daily-averages": "ts-node src/tools/calculateAllDailyAverages.ts",
+    "setup": "npm install && npm run build"
   },
   "keywords": [
     "steam",

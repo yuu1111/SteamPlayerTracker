@@ -4,7 +4,8 @@
       "Bash(npm install)",
       "Bash(mkdir:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run typecheck:*)"
+      "Bash(npm run typecheck:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

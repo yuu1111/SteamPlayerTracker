@@ -22,10 +22,13 @@ function validateConfig(): Config {
     output: {
       csvEnabled: process.env.CSV_OUTPUT_ENABLED !== 'false',
       csvFilePath: process.env.CSV_FILE_PATH || 'steam_concurrent_players.csv',
+      dailyAverageCsvEnabled: process.env.DAILY_AVERAGE_CSV_ENABLED !== 'false',
+      dailyAverageCsvFilePath: process.env.DAILY_AVERAGE_CSV_FILE_PATH || 'steam_daily_averages.csv',
     },
     
     scheduling: {
       collectionMinutes: parseMinutes(process.env.COLLECTION_MINUTES || '0,30'),
+      dailyAverageHour: parseInt(process.env.DAILY_AVERAGE_HOUR || '0'),
     },
     
     retry: {
@@ -44,6 +47,7 @@ function validateConfig(): Config {
       enabled: true,
       spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
       sheetName: process.env.GOOGLE_SHEETS_SHEET_NAME || 'PlayerData',
+      dailyAverageSheetName: process.env.GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME || 'DailyAverages',
       serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
     };
 

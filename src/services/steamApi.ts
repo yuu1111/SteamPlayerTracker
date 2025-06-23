@@ -16,7 +16,14 @@ export class SteamApiService {
       });
 
       if (response.data?.response?.player_count !== undefined) {
-        return response.data.response.player_count;
+        const playerCount = response.data.response.player_count;
+        
+        // Treat 0 players as a failed request
+        if (playerCount === 0) {
+          throw new Error('Steam API returned 0 players - treating as failed request');
+        }
+        
+        return playerCount;
       } else {
         throw new Error('Invalid response format from Steam API');
       }

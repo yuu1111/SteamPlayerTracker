@@ -2,6 +2,7 @@ import { config } from './config/config';
 import { SteamApiService } from './services/steamApi';
 import { CsvWriter } from './services/csvWriter';
 import { GoogleSheetsService } from './services/googleSheets';
+import { DailyAverageService } from './services/dailyAverageService';
 import { Scheduler } from './services/scheduler';
 import { RetryHandler } from './utils/retry';
 import { Logger } from './utils/logger';
@@ -11,6 +12,8 @@ export class SteamPlayerTracker {
   private steamApi: SteamApiService;
   private csvWriter: CsvWriter;
   private googleSheets?: GoogleSheetsService;
+  private dailyAverageGoogleSheets?: GoogleSheetsService;
+  private dailyAverageService?: DailyAverageService;
   private scheduler: Scheduler;
   private retryHandler: RetryHandler;
   private logger: Logger;
@@ -28,6 +31,25 @@ export class SteamPlayerTracker {
         config.googleSheets.sheetName!,
         config.googleSheets.serviceAccountKeyPath!
       );
+      
+      // Create separate Google Sheets service for daily averages
+      if (config.output.dailyAverageCsvEnabled) {
+        this.dailyAverageGoogleSheets = new GoogleSheetsService(
+          config.googleSheets.spreadsheetId!,
+          config.googleSheets.dailyAverageSheetName!,
+          config.googleSheets.serviceAccountKeyPath!
+        );
+      }
+    }
+    
+    // Initialize daily average service if enabled
+    if (config.output.dailyAverageCsvEnabled) {
+      this.dailyAverageService = new DailyAverageService(
+        config.output.csvFilePath,
+        config.output.dailyAverageCsvFilePath,
+        this.logger,
+        this.dailyAverageGoogleSheets
+      );
     }
   }
 
@@ -41,11 +63,29 @@ export class SteamPlayerTracker {
       });
 
       await this.validateConfiguration();
+      
+      // Collect data immediately on startup
+      this.logger.info('Collecting initial data on startup...');
+      await this.collectAndSaveData();
+      
+      // Check and calculate missing daily averages if enabled
+      if (config.output.dailyAverageCsvEnabled && this.dailyAverageService) {
+        this.logger.info('Checking for missing daily averages...');
+        await this.dailyAverageService.checkAndCalculateMissingAverages();
+      }
 
       this.scheduler.scheduleDataCollection(
         config.scheduling.collectionMinutes,
         () => this.collectAndSaveData()
       );
+      
+      // Schedule daily average calculation if enabled
+      if (config.output.dailyAverageCsvEnabled && this.dailyAverageService) {
+        this.scheduler.scheduleDailyTask(
+          config.scheduling.dailyAverageHour,
+          () => this.calculateDailyAverage()
+        );
+      }
 
       this.setupGracefulShutdown();
 
@@ -55,6 +95,7 @@ export class SteamPlayerTracker {
       console.log(`⏰ Collection schedule: every hour at minutes ${config.scheduling.collectionMinutes.join(', ')}`);
       console.log(`📁 CSV output: ${config.output.csvEnabled ? config.output.csvFilePath : 'disabled'}`);
       console.log(`📋 Google Sheets: ${config.googleSheets?.enabled ? 'enabled' : 'disabled'}`);
+      console.log(`📈 Daily averages: ${config.output.dailyAverageCsvEnabled ? `enabled (calculated at ${config.scheduling.dailyAverageHour}:00)` : 'disabled'}`);
       console.log(`🔄 Press Ctrl+C to stop`);
 
     } catch (error) {
@@ -125,6 +166,31 @@ export class SteamPlayerTracker {
 
     } catch (error) {
       this.logger.error('Data collection failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  
+  private async calculateDailyAverage(): Promise<void> {
+    if (!this.dailyAverageService) {
+      return;
+    }
+    
+    try {
+      this.logger.info('Starting daily average calculation...');
+      
+      // Calculate average for yesterday
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      await this.retryHandler.executeWithRetry(
+        () => this.dailyAverageService!.calculateAndSaveDailyAverage(yesterday),
+        'Daily average calculation'
+      );
+      
+      this.logger.info('Daily average calculation completed successfully');
+    } catch (error) {
+      this.logger.error('Daily average calculation failed', {
         error: error instanceof Error ? error.message : String(error),
       });
     }

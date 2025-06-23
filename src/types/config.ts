@@ -6,10 +6,13 @@ export interface Config {
   output: {
     csvEnabled: boolean;
     csvFilePath: string;
+    dailyAverageCsvEnabled: boolean;
+    dailyAverageCsvFilePath: string;
   };
   
   scheduling: {
     collectionMinutes: number[];
+    dailyAverageHour: number;
   };
   
   retry: {
@@ -26,6 +29,7 @@ export interface Config {
     enabled: boolean;
     spreadsheetId?: string;
     sheetName?: string;
+    dailyAverageSheetName?: string;
     serviceAccountKeyPath?: string;
   };
 }

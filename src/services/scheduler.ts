@@ -51,4 +51,25 @@ export class Scheduler {
       .map(key => parseInt(key.replace('minute-', '')))
       .sort((a, b) => a - b);
   }
+  
+  scheduleDailyTask(hour: number, callback: () => Promise<void>): void {
+    const cronExpression = `0 ${hour} * * *`;
+    
+    if (!cron.validate(cronExpression)) {
+      throw new Error(`Invalid cron expression for hour ${hour}`);
+    }
+    
+    const task = cron.schedule(cronExpression, async () => {
+      try {
+        await callback();
+      } catch (error) {
+        console.error(`Daily task error:`, error);
+      }
+    }, {
+      scheduled: false,
+    });
+    
+    this.tasks.set(`daily-${hour}`, task);
+    task.start();
+  }
 }
