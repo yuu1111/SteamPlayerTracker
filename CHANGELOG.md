@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 **Date Format:** All dates are in JST (Japan Standard Time)
 
+## [Unreleased]
+
+### Added
+- Improved window titles for setup.bat/setup.ps1 scripts to show "Setting up..." status
+- Improved window titles for build.bat/build.ps1 scripts to show "Building..." status
+
+### Changed
+- Enhanced window title consistency across all platform scripts
+
 ## [1.1.3] - 2025-06-24 JST
 
 ### Added

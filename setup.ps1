@@ -1,6 +1,6 @@
 # Steam Player Tracker Setup Script for PowerShell Core (pwsh)
 
-$Host.UI.RawUI.WindowTitle = "Steam Player Tracker - Setup"
+$Host.UI.RawUI.WindowTitle = "Steam Player Tracker - Setting up..."
 
 Write-Host "Steam Player Tracker - Setup Script" -ForegroundColor Cyan
 Write-Host "====================================" -ForegroundColor Cyan
