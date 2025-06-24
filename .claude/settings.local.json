@@ -16,7 +16,8 @@
       "Bash(rm:*)",
       "Bash(npm install:*)",
       "Bash(time npm run lint)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }

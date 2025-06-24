@@ -6,7 +6,6 @@
 このプロジェクトは [Semantic Versioning](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
 **言語:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
-**日付形式:** 全ての日付は JST（日本標準時）で記述
 
 ## [1.1.4] - 2025-06-24 JST
 
