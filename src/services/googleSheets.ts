@@ -66,13 +66,13 @@ export class GoogleSheetsService {
       });
 
       const values = response.data.values;
-      if (!values || values.length === 0 || values[0][0] !== 'timestamp') {
+      if (!values || values.length === 0 || (values[0][0] !== 'timestamp' && values[0][0] !== 'timestamp (UTC)')) {
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
           range: `${this.sheetName}!A1:B1`,
           valueInputOption: 'RAW',
           requestBody: {
-            values: [['timestamp', 'player_count']],
+            values: [['timestamp (UTC)', 'player_count']],
           },
         });
       }
@@ -114,13 +114,13 @@ export class GoogleSheetsService {
       });
 
       const values = response.data.values;
-      if (!values || values.length === 0 || values[0][0] !== 'date') {
+      if (!values || values.length === 0 || (values[0][0] !== 'date' && values[0][0] !== 'date (UTC)')) {
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
           range: `${this.sheetName}!A1:C1`,
           valueInputOption: 'RAW',
           requestBody: {
-            values: [['date', 'average_player_count', 'sample_count']],
+            values: [['date (UTC)', 'average_player_count', 'sample_count']],
           },
         });
       }
