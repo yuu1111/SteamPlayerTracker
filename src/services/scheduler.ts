@@ -4,7 +4,7 @@ export class Scheduler {
   private tasks: Map<string, cron.ScheduledTask> = new Map();
 
   scheduleDataCollection(minutes: number[], callback: () => Promise<void>): void {
-    this.stopAll();
+    this.stopDataCollectionTasks();
 
     minutes.forEach((minute) => {
       const cronExpression = `${minute} * * * *`;
@@ -32,6 +32,15 @@ export class Scheduler {
   startAll(): void {
     this.tasks.forEach((task) => {
       task.start();
+    });
+  }
+
+  stopDataCollectionTasks(): void {
+    this.tasks.forEach((task, key) => {
+      if (key.startsWith('minute-')) {
+        task.stop();
+        this.tasks.delete(key);
+      }
     });
   }
 
