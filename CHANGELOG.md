@@ -8,14 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 **Date Format:** All dates are in JST (Japan Standard Time)
 
-## [X.X.X] - 2025-06-24 JST
+## [1.1.4] - 2025-06-24 JST
 
 ### Added
+- UTC timezone clarification in Google Sheets headers
 - Improved window titles for setup.bat/setup.ps1 scripts to show "Setting up..." status
 - Improved window titles for build.bat/build.ps1 scripts to show "Building..." status
 
+### Fixed
+- Daily average calculation tasks now persist during data collection scheduling
+- Scheduler no longer stops daily tasks when rescheduling data collection
+
 ### Changed
 - Enhanced window title consistency across all platform scripts
+- Google Sheets headers now clearly indicate "timestamp (UTC)" and "date (UTC)"
 
 ## [1.1.3] - 2025-06-24 JST
 
