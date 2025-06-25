@@ -43,6 +43,37 @@ Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
 - **IMPORTANT**: All dates in CHANGELOGs must be in JST (Japan Standard Time) format
 - Date format: "YYYY-MM-DD JST" (e.g., "2025-06-24 JST")
 
+**Release Process Workflow**:
+1. **Complete all development work** and ensure all commits are pushed
+2. **Run automated release command**:
+   ```bash
+   npm run release          # Patch release (1.0.0 → 1.0.1)
+   npm run release:minor    # Minor release (1.0.0 → 1.1.0) 
+   npm run release:major    # Major release (1.0.0 → 2.0.0)
+   ```
+   This automatically:
+   - Cleans dependencies and rebuilds
+   - Runs type checking and linting
+   - Updates package.json version
+   - Creates release commit and Git tag
+3. **Update CHANGELOG placeholders** to actual version and JST date:
+   - Replace "## [X.X.X] - YYYY-MM-DD JST" → "## [1.2.0] - 2025-06-25 JST"
+   - Update both CHANGELOG.md and CHANGELOG-JP.md
+4. **Update README documentation** if new features were added:
+   - Update feature lists, usage examples, and command references
+   - Ensure both README.md and README-JP.md are synchronized
+5. **Commit documentation updates**:
+   ```bash
+   git add CHANGELOG.md CHANGELOG-JP.md README.md README-JP.md
+   git commit -m "docs: finalize vX.X.X release documentation"
+   ```
+6. **Push release to remote**:
+   ```bash
+   git push origin main      # Push release commits
+   git push origin vX.X.X    # Push version tag
+   ```
+7. **GitHub Actions automatically creates release artifacts** with tar.gz and zip files
+
 ## Development Commands
 
 ```bash
