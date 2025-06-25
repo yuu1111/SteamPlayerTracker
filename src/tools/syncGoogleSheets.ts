@@ -31,7 +31,8 @@ async function syncPlayerData(googleSheets: GoogleSheetsService): Promise<void> 
 
   logger.info(`Found ${csvData.length - 1} records in CSV`);
   
-  // Skip header row
+  // Parse and sort records by timestamp
+  const records: PlayerDataRecord[] = [];
   for (let i = 1; i < csvData.length; i++) {
     const [timestamp, playerCount] = csvData[i];
     
@@ -42,17 +43,52 @@ async function syncPlayerData(googleSheets: GoogleSheetsService): Promise<void> 
       };
       
       if (!isNaN(record.playerCount)) {
-        try {
-          await googleSheets.appendRecord(record);
-          
-          // Log progress every 100 records
-          if (i % 100 === 0) {
-            logger.info(`Synced ${i} / ${csvData.length - 1} records`);
-          }
-        } catch (error) {
-          logger.error(`Failed to sync record ${i}: ${error}`);
-        }
+        records.push(record);
       }
+    }
+  }
+  
+  // Sort records by timestamp (oldest first)
+  records.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  logger.info(`Sorted ${records.length} records by timestamp`);
+  
+  // Process in batches to avoid rate limits and maintain order
+  const batchSize = 100;
+  const totalBatches = Math.ceil(records.length / batchSize);
+  
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const start = batchIndex * batchSize;
+    const end = Math.min(start + batchSize, records.length);
+    const batch = records.slice(start, end);
+    
+    logger.info(`Processing batch ${batchIndex + 1}/${totalBatches} (${batch.length} records)`);
+    
+    // Process each record in the batch individually to handle duplicates
+    for (let i = 0; i < batch.length; i++) {
+      try {
+        await googleSheets.appendRecord(batch[i]);
+        
+        // Log progress every 50 records across all batches
+        const totalProcessed = start + i + 1;
+        if (totalProcessed % 50 === 0) {
+          logger.info(`Synced ${totalProcessed} / ${records.length} records`);
+        }
+        
+        // Add small delay between individual records
+        if (i < batch.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      } catch (error) {
+        logger.error(`Failed to sync record ${start + i + 1}: ${error}`);
+        // Add longer delay on error
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    // Add delay between batches
+    if (batchIndex < totalBatches - 1) {
+      logger.info(`Batch ${batchIndex + 1} completed, waiting before next batch...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   
@@ -74,7 +110,8 @@ async function syncDailyAverages(googleSheets: GoogleSheetsService): Promise<voi
   const header = csvData[0];
   const hasExtendedData = header.length > 3;
   
-  // Skip header row
+  // Parse records
+  const records = [];
   for (let i = 1; i < csvData.length; i++) {
     const row = csvData[i];
     
@@ -90,13 +127,29 @@ async function syncDailyAverages(googleSheets: GoogleSheetsService): Promise<voi
       };
       
       if (!isNaN(record.playerCount) && !isNaN(record.sampleCount)) {
-        try {
-          await googleSheets.appendDailyAverageRecord(record);
-          logger.info(`Synced daily average for ${record.timestamp}`);
-        } catch (error) {
-          logger.error(`Failed to sync daily average for ${record.timestamp}: ${error}`);
-        }
+        records.push(record);
       }
+    }
+  }
+  
+  // Sort records by date (oldest first)
+  records.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  logger.info(`Sorted ${records.length} daily average records by date`);
+  
+  // Sync records with rate limiting (daily averages are smaller, process individually)
+  for (let i = 0; i < records.length; i++) {
+    try {
+      await googleSheets.appendDailyAverageRecord(records[i]);
+      logger.info(`Synced daily average for ${records[i].timestamp} (${i + 1}/${records.length})`);
+      
+      // Add delay to avoid rate limits (300ms between requests for daily averages)
+      if (i < records.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    } catch (error) {
+      logger.error(`Failed to sync daily average for ${records[i].timestamp}: ${error}`);
+      // Add longer delay on error
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
   }
   

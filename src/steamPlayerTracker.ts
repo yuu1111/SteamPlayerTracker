@@ -94,25 +94,11 @@ export class SteamPlayerTracker {
         this.logger.warn('Failed to get game name', { error: error instanceof Error ? error.message : String(error) });
       }
       
-      // Sync with Google Sheets if enabled and requested
+      // Start background sync with Google Sheets if enabled and requested
       if (config.googleSheets?.enabled && config.googleSheets?.syncOnStartup) {
-        this.logger.info('Syncing local CSV data with Google Sheets...');
-        try {
-          // Sync player data
-          if (this.googleSheets) {
-            await syncPlayerData(this.googleSheets);
-            this.logger.info('Player data sync completed');
-          }
-          
-          // Sync daily averages if enabled
-          if (config.output.dailyAverageCsvEnabled && this.dailyAverageGoogleSheets) {
-            await syncDailyAverages(this.dailyAverageGoogleSheets);
-            this.logger.info('Daily average data sync completed');
-          }
-        } catch (error) {
-          this.logger.error('Google Sheets sync failed', { error: error instanceof Error ? error.message : String(error) });
-          // Continue execution even if sync fails
-        }
+        this.logger.info('Starting background sync with Google Sheets...');
+        // Run sync in background without blocking startup
+        this.startBackgroundSync();
       }
       
       // Collect data immediately on startup
@@ -147,6 +133,9 @@ export class SteamPlayerTracker {
       console.log(`📁 CSV output: ${config.output.csvEnabled ? config.output.csvFilePath : 'disabled'}`);
       console.log(`📋 Google Sheets: ${config.googleSheets?.enabled ? 'enabled' : 'disabled'}`);
       console.log(`📈 Daily averages: ${config.output.dailyAverageCsvEnabled ? `enabled (calculated at ${config.scheduling.dailyAverageHour}:00)` : 'disabled'}`);
+      if (config.googleSheets?.enabled && config.googleSheets?.syncOnStartup) {
+        console.log(`🔄 Background sync: starting in 2 seconds...`);
+      }
       console.log(`🔄 Press Ctrl+C to stop`);
 
     } catch (error) {
@@ -248,6 +237,36 @@ export class SteamPlayerTracker {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  private async startBackgroundSync(): Promise<void> {
+    // Run sync in background without blocking main application
+    setTimeout(async () => {
+      try {
+        this.logger.info('Starting background CSV to Google Sheets sync...');
+        
+        // Sync player data
+        if (this.googleSheets) {
+          this.logger.info('Syncing player data in background...');
+          await syncPlayerData(this.googleSheets);
+          this.logger.info('Background player data sync completed');
+        }
+        
+        // Sync daily averages if enabled
+        if (config.output.dailyAverageCsvEnabled && this.dailyAverageGoogleSheets) {
+          this.logger.info('Syncing daily averages in background...');
+          await syncDailyAverages(this.dailyAverageGoogleSheets);
+          this.logger.info('Background daily average sync completed');
+        }
+        
+        this.logger.info('All background sync operations completed successfully');
+      } catch (error) {
+        this.logger.error('Background sync failed', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+        // Don't exit on sync failure, just log it
+      }
+    }, 2000); // Start sync after 2 seconds to let main app initialize
   }
 
   private setupGracefulShutdown(): void {

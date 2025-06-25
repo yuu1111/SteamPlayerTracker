@@ -18,6 +18,8 @@ export class GoogleSheetsService {
   private sheets!: sheets_v4.Sheets;
   private spreadsheetId: string;
   private sheetName: string;
+  private lastRequestTime: number = 0;
+  private readonly minRequestInterval: number = 100; // 100ms between requests
 
   constructor(spreadsheetId: string, sheetName: string, serviceAccountKeyPath: string) {
     this.spreadsheetId = spreadsheetId;
@@ -42,6 +44,79 @@ export class GoogleSheetsService {
     }
   }
 
+  private async rateLimitedRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const delay = this.minRequestInterval - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    this.lastRequestTime = Date.now();
+    return await requestFn();
+  }
+
+  async batchAppendRecords(records: PlayerDataRecord[]): Promise<void> {
+    if (records.length === 0) return;
+
+    try {
+      await this.ensureHeaderExists();
+      
+      // Convert records to values array
+      const values = records.map(record => [record.timestamp, record.playerCount]);
+      
+      // Batch append all records at once
+      await this.rateLimitedRequest(() =>
+        this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A:B`,
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          requestBody: {
+            values: values,
+          },
+        })
+      );
+    } catch (error) {
+      throw new Error(`Failed to batch append records to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async batchAppendDailyAverageRecords(records: DailyAverageSheetRecord[]): Promise<void> {
+    if (records.length === 0) return;
+
+    try {
+      await this.ensureDailyAverageHeaderExists();
+      
+      // Convert records to values array
+      const values = records.map(record => [
+        record.timestamp, 
+        record.playerCount, 
+        record.sampleCount,
+        record.maxPlayerCount || '',
+        record.maxPlayerTimestamp || '',
+        record.minPlayerCount || '',
+        record.minPlayerTimestamp || ''
+      ]);
+      
+      // Batch append all records at once
+      await this.rateLimitedRequest(() =>
+        this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A:G`,
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          requestBody: {
+            values: values,
+          },
+        })
+      );
+    } catch (error) {
+      throw new Error(`Failed to batch append daily average records to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async appendRecord(record: PlayerDataRecord): Promise<void> {
     try {
       await this.ensureHeaderExists();
@@ -53,25 +128,29 @@ export class GoogleSheetsService {
       
       if (existingRowIndex !== null) {
         // Update existing record
-        await this.sheets.spreadsheets.values.update({
-          spreadsheetId: this.spreadsheetId,
-          range: `${this.sheetName}!A${existingRowIndex}:B${existingRowIndex}`,
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: values,
-          },
-        });
+        await this.rateLimitedRequest(() =>
+          this.sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A${existingRowIndex}:B${existingRowIndex}`,
+            valueInputOption: 'RAW',
+            requestBody: {
+              values: values,
+            },
+          })
+        );
       } else {
         // Append new record
-        await this.sheets.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          range: `${this.sheetName}!A:B`,
-          valueInputOption: 'RAW',
-          insertDataOption: 'INSERT_ROWS',
-          requestBody: {
-            values: values,
-          },
-        });
+        await this.rateLimitedRequest(() =>
+          this.sheets.spreadsheets.values.append({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A:B`,
+            valueInputOption: 'RAW',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: {
+              values: values,
+            },
+          })
+        );
       }
     } catch (error) {
       throw new Error(`Failed to append/update record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -155,25 +234,29 @@ export class GoogleSheetsService {
       
       if (existingRowIndex !== null) {
         // Update existing record
-        await this.sheets.spreadsheets.values.update({
-          spreadsheetId: this.spreadsheetId,
-          range: `${this.sheetName}!A${existingRowIndex}:G${existingRowIndex}`,
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: values,
-          },
-        });
+        await this.rateLimitedRequest(() =>
+          this.sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A${existingRowIndex}:G${existingRowIndex}`,
+            valueInputOption: 'RAW',
+            requestBody: {
+              values: values,
+            },
+          })
+        );
       } else {
         // Append new record
-        await this.sheets.spreadsheets.values.append({
-          spreadsheetId: this.spreadsheetId,
-          range: `${this.sheetName}!A:G`,
-          valueInputOption: 'RAW',
-          insertDataOption: 'INSERT_ROWS',
-          requestBody: {
-            values: values,
-          },
-        });
+        await this.rateLimitedRequest(() =>
+          this.sheets.spreadsheets.values.append({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A:G`,
+            valueInputOption: 'RAW',
+            insertDataOption: 'INSERT_ROWS',
+            requestBody: {
+              values: values,
+            },
+          })
+        );
       }
     } catch (error) {
       throw new Error(`Failed to append/update daily average record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
