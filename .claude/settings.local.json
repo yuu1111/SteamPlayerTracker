@@ -17,7 +17,8 @@
       "Bash(npm install:*)",
       "Bash(time npm run lint)",
       "Bash(timeout:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(npm run calculate-daily-averages:*)"
     ],
     "deny": []
   }
