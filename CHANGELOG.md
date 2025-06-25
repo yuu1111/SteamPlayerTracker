@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 
-## [X.X.X] - YYYY-MM-DD JST
+## [1.2.0] - 2025-06-25 JST
 
 ### Added
 - Daily max/min player counts with timestamps in statistics

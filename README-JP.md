@@ -8,14 +8,16 @@ SteamPlayerTracker は、指定されたSteamゲームの現在の同時接続�
 
 - 🎮 **Steam Web API からのプレイヤー数取得**: 指定したゲームの現在のプレイヤー数を自動取得
 - 📊 **CSV形式での記録**: タイムスタンプ付きでプレイヤー数をCSVファイルに保存
-- 📈 **日次平均の自動計算**: 1日ごとの平均プレイヤー数を別ファイルに記録（0を除外）
-- 📋 **Googleスプレッドシート連携**: オプションでスプレッドシートに直接データを書き込み
+- 📈 **拡張日次統計**: 日次平均と最大・最小プレイヤー数およびそれらのタイムスタンプを記録
+- 🔄 **CSV-Googleシート同期**: データ不整合を解決する手動同期ツール
+- 📋 **Googleスプレッドシート連携**: レート制限対応付きのスプレッドシート直接書き込み
 - ⏰ **柔軟なスケジューリング**: 任意の分指定で定期実行
 - 🔄 **エラーハンドリング・リトライ機能**: 指数関数的バックオフによる自動リトライ
 - 📝 **詳細なロギング**: ログレベル管理・ローテーション対応
 - 🛡️ **型安全性**: TypeScript による型チェック
 - 🚀 **起動時の即座データ取得**: スクリプト開始時に現在のプレイヤー数を取得
 - 📊 **未計算の日次平均を自動補完**: 起動時に過去の未計算分を自動計算
+- 🖥️ **クロスプラットフォームスクリプト**: すべての操作用のPowerShell、Bash、Batchスクリプト
 
 ## 必要な環境
 
@@ -136,6 +138,20 @@ npm start
 npm run calculate-daily-averages
 ```
 
+### Googleシート同期
+
+ローカルCSVデータをGoogleシートと手動で同期：
+
+```bash
+# npmコマンドを使用
+npm run sync-google-sheets
+
+# プラットフォーム固有スクリプトを使用
+sync-google-sheets.bat    # Windows（Batch）
+sync-google-sheets.ps1    # Windows（PowerShell）
+./sync-google-sheets.sh   # Linux/macOS
+```
+
 ### バックグラウンド実行（Linux/Mac）
 
 ```bash
@@ -220,14 +236,14 @@ timestamp,player_count
 2024-06-23 10:30:00,13456
 ```
 
-### 日次平均ファイル
+### 日次平均ファイル（拡張フォーマット）
 ```csv
-timestamp,player_count
-2024-06-22,12890
-2024-06-23,13245
+date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp
+2024-06-22,12890,48,15420,2024-06-22 18:30:00,8450,2024-06-22 05:00:00
+2024-06-23,13245,48,16890,2024-06-23 19:00:00,9120,2024-06-23 04:30:00
 ```
 
-**注意**: 日次平均計算時、プレイヤー数が0のデータは除外されます（API取得失敗とみなすため）。
+**注意**: 日次平均計算時、プレイヤー数が0のデータは除外されます（API取得失敗とみなすため）。拡張フォーマットでは最大・最小プレイヤー数とその正確なタイムスタンプが含まれます。
 
 ## トラブルシューティング
 
@@ -268,6 +284,7 @@ npm run clean      # distディレクトリをクリア
 npm run lint       # ESLintによる静的解析
 npm run typecheck  # TypeScriptの型チェック
 npm run calculate-daily-averages  # 全日次平均を計算
+npm run sync-google-sheets       # CSVデータをGoogleシートに同期
 ```
 
 ### 起動スクリプト
@@ -277,12 +294,15 @@ npm run calculate-daily-averages  # 全日次平均を計算
 | `setup.bat` | 初回セットアップ用バッチファイル | Windows |
 | `build.bat` | ビルド用バッチファイル | Windows |
 | `start.bat` | 起動用バッチファイル | Windows |
+| `sync-google-sheets.bat` | Googleシート同期用バッチファイル | Windows |
 | `setup.ps1` | 初回セットアップ用PowerShell Coreスクリプト | Windows |
 | `build.ps1` | ビルド用PowerShell Coreスクリプト | Windows |
 | `start.ps1` | 起動用PowerShell Coreスクリプト | Windows |
+| `sync-google-sheets.ps1` | Googleシート同期用PowerShellスクリプト | Windows |
 | `setup.sh` | 初回セットアップ用シェルスクリプト | Linux/macOS |
 | `build.sh` | ビルド用シェルスクリプト | Linux/macOS |
 | `start.sh` | 起動用シェルスクリプト | Linux/macOS |
+| `sync-google-sheets.sh` | Googleシート同期用シェルスクリプト | Linux/macOS |
 
 ### ディレクトリ構造
 

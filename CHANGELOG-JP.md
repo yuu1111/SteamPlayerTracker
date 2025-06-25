@@ -7,7 +7,7 @@
 
 **言語:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 
-## [X.X.X] - YYYY-MM-DD JST
+## [1.2.0] - 2025-06-25 JST
 
 ### 追加
 - 日次統計に最高値・最低値のプレイヤー数とその時刻を追加

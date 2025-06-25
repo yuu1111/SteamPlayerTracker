@@ -8,14 +8,16 @@ SteamPlayerTracker is an application that periodically retrieves the current con
 
 - 🎮 **Steam Web API Player Count Retrieval**: Automatically fetches current player count for specified games
 - 📊 **CSV Format Recording**: Saves player count data to CSV files with timestamps
-- 📈 **Automatic Daily Average Calculation**: Records daily average player counts in separate files (excluding zeros)
-- 📋 **Google Sheets Integration**: Optional direct data writing to spreadsheets
+- 📈 **Enhanced Daily Statistics**: Records daily averages with max/min player counts and their timestamps
+- 🔄 **CSV-Google Sheets Sync**: Manual synchronization tool to resolve data discrepancies
+- 📋 **Google Sheets Integration**: Optional direct data writing to spreadsheets with rate limit handling
 - ⏰ **Flexible Scheduling**: Periodic execution with customizable minute intervals
 - 🔄 **Error Handling & Retry Functionality**: Automatic retry with exponential backoff
 - 📝 **Detailed Logging**: Log level management with rotation support
 - 🛡️ **Type Safety**: TypeScript type checking
 - 🚀 **Immediate Data Collection on Startup**: Fetches current player count when script starts
 - 📊 **Automatic Daily Average Backfill**: Automatically calculates missing daily averages on startup
+- 🖥️ **Cross-Platform Scripts**: PowerShell, Bash, and Batch scripts for all operations
 
 ## Requirements
 
@@ -136,6 +138,20 @@ Calculate all daily averages from historical data:
 npm run calculate-daily-averages
 ```
 
+### Google Sheets Synchronization
+
+Manually sync local CSV data with Google Sheets:
+
+```bash
+# Using npm command
+npm run sync-google-sheets
+
+# Using platform-specific scripts
+sync-google-sheets.bat    # Windows (Batch)
+sync-google-sheets.ps1    # Windows (PowerShell)
+./sync-google-sheets.sh   # Linux/macOS
+```
+
 ### Background Execution (Linux/Mac)
 
 ```bash
@@ -220,14 +236,14 @@ timestamp,player_count
 2024-06-23 10:30:00,13456
 ```
 
-### Daily Average File
+### Daily Average File (Enhanced Format)
 ```csv
-timestamp,player_count
-2024-06-22,12890
-2024-06-23,13245
+date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp
+2024-06-22,12890,48,15420,2024-06-22 18:30:00,8450,2024-06-22 05:00:00
+2024-06-23,13245,48,16890,2024-06-23 19:00:00,9120,2024-06-23 04:30:00
 ```
 
-**Note**: When calculating daily averages, data with 0 player count is excluded (considered API fetch failures).
+**Note**: When calculating daily averages, data with 0 player count is excluded (considered API fetch failures). The enhanced format includes maximum and minimum player counts with their exact timestamps.
 
 ## Troubleshooting
 
@@ -268,6 +284,7 @@ npm run clean      # Clear dist directory
 npm run lint       # ESLint static analysis
 npm run typecheck  # TypeScript type checking
 npm run calculate-daily-averages  # Calculate all daily averages
+npm run sync-google-sheets       # Sync CSV data to Google Sheets
 ```
 
 ### Platform Scripts
@@ -277,12 +294,15 @@ npm run calculate-daily-averages  # Calculate all daily averages
 | `setup.bat` | Initial setup batch file | Windows |
 | `build.bat` | Build batch file | Windows |
 | `start.bat` | Start batch file | Windows |
+| `sync-google-sheets.bat` | Google Sheets sync batch file | Windows |
 | `setup.ps1` | Initial setup PowerShell Core script | Windows |
 | `build.ps1` | Build PowerShell Core script | Windows |
 | `start.ps1` | Start PowerShell Core script | Windows |
+| `sync-google-sheets.ps1` | Google Sheets sync PowerShell script | Windows |
 | `setup.sh` | Initial setup shell script | Linux/macOS |
 | `build.sh` | Build shell script | Linux/macOS |
 | `start.sh` | Start shell script | Linux/macOS |
+| `sync-google-sheets.sh` | Google Sheets sync shell script | Linux/macOS |
 
 ### Directory Structure
 
