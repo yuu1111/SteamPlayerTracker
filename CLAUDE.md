@@ -26,6 +26,12 @@ Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
 - Group related file changes together (e.g., source code + tests, documentation updates, configuration changes)
 - Separate functional changes from documentation/formatting changes
 - Each commit should represent a single logical unit of work
+- **IMPORTANT**: Always divide implementation work into logical commits and push separately:
+  - Core functionality changes (services, business logic)
+  - Configuration and setup changes
+  - Platform-specific scripts (.ps1, .sh, .bat files)
+  - Documentation updates
+  - Each commit should have a clear, focused purpose and be pushed immediately after completion
 
 **Release Management**: 
 - When creating releases, always update CHANGELOG.md and CHANGELOG-JP.md with proper version numbers
