@@ -18,7 +18,9 @@
       "Bash(time npm run lint)",
       "Bash(timeout:*)",
       "Bash(git tag:*)",
-      "Bash(npm run calculate-daily-averages:*)"
+      "Bash(npm run calculate-daily-averages:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
