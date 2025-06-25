@@ -1,6 +1,7 @@
 import { config } from '../config/config';
 import { DailyAverageService } from '../services/dailyAverageService';
 import { GoogleSheetsService } from '../services/googleSheets';
+import { QueuedGoogleSheetsService } from '../services/queuedGoogleSheets';
 import { Logger } from '../utils/logger';
 
 async function calculateAllDailyAverages() {
@@ -9,13 +10,19 @@ async function calculateAllDailyAverages() {
   try {
     logger.info('Starting calculation of all daily averages...');
     
-    let googleSheets: GoogleSheetsService | undefined;
+    let queuedGoogleSheets: QueuedGoogleSheetsService | undefined;
     
     if (config.googleSheets?.enabled && config.output.dailyAverageCsvEnabled) {
-      googleSheets = new GoogleSheetsService(
+      const dailyAverageGoogleSheets = new GoogleSheetsService(
         config.googleSheets.spreadsheetId!,
         config.googleSheets.dailyAverageSheetName!,
         config.googleSheets.serviceAccountKeyPath!
+      );
+      
+      queuedGoogleSheets = new QueuedGoogleSheetsService(
+        undefined,
+        dailyAverageGoogleSheets,
+        logger
       );
     }
     
@@ -23,7 +30,7 @@ async function calculateAllDailyAverages() {
       config.output.csvFilePath,
       config.output.dailyAverageCsvFilePath,
       logger,
-      googleSheets
+      queuedGoogleSheets
     );
     
     await dailyAverageService.updateAllDailyAverages();

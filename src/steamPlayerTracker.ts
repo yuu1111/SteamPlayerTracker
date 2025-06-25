@@ -2,6 +2,7 @@ import { config } from './config/config';
 import { SteamApiService } from './services/steamApi';
 import { CsvWriter } from './services/csvWriter';
 import { GoogleSheetsService } from './services/googleSheets';
+import { QueuedGoogleSheetsService } from './services/queuedGoogleSheets';
 import { DailyAverageService } from './services/dailyAverageService';
 import { Scheduler } from './services/scheduler';
 import { RetryHandler } from './utils/retry';
@@ -14,6 +15,7 @@ export class SteamPlayerTracker {
   private csvWriter: CsvWriter;
   private googleSheets?: GoogleSheetsService;
   private dailyAverageGoogleSheets?: GoogleSheetsService;
+  private queuedGoogleSheets?: QueuedGoogleSheetsService;
   private dailyAverageService?: DailyAverageService;
   private scheduler: Scheduler;
   private retryHandler: RetryHandler;
@@ -42,6 +44,13 @@ export class SteamPlayerTracker {
           config.googleSheets.serviceAccountKeyPath!
         );
       }
+      
+      // Create queued Google Sheets service for rate limit handling
+      this.queuedGoogleSheets = new QueuedGoogleSheetsService(
+        this.googleSheets,
+        this.dailyAverageGoogleSheets,
+        this.logger
+      );
     }
     
     // Initialize daily average service if enabled
@@ -50,7 +59,7 @@ export class SteamPlayerTracker {
         config.output.csvFilePath,
         config.output.dailyAverageCsvFilePath,
         this.logger,
-        this.dailyAverageGoogleSheets
+        this.queuedGoogleSheets
       );
     }
   }
@@ -189,12 +198,9 @@ export class SteamPlayerTracker {
         );
       }
 
-      if (config.googleSheets?.enabled && this.googleSheets) {
+      if (config.googleSheets?.enabled && this.queuedGoogleSheets) {
         savePromises.push(
-          this.retryHandler.executeWithRetry(
-            () => this.googleSheets!.appendRecord(record),
-            'Google Sheets write'
-          )
+          this.queuedGoogleSheets.addPlayerRecord(record)
         );
       }
 

@@ -139,7 +139,7 @@ export class GoogleSheetsService {
           })
         );
       } else {
-        // Append new record
+        // Append new record (order will be maintained by sync tool if needed)
         await this.rateLimitedRequest(() =>
           this.sheets.spreadsheets.values.append({
             spreadsheetId: this.spreadsheetId,
@@ -245,7 +245,7 @@ export class GoogleSheetsService {
           })
         );
       } else {
-        // Append new record
+        // Append new record (order will be maintained by sync tool if needed)
         await this.rateLimitedRequest(() =>
           this.sheets.spreadsheets.values.append({
             spreadsheetId: this.spreadsheetId,

@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import { CsvWriter } from './csvWriter';
-import { GoogleSheetsService } from './googleSheets';
+import { QueuedGoogleSheetsService } from './queuedGoogleSheets';
 import { PlayerDataRecord } from '../types/config';
 import { Logger } from '../utils/logger';
 
@@ -17,7 +17,7 @@ export interface DailyAverageRecord {
 export class DailyAverageService {
   private csvWriter: CsvWriter;
   private dailyAverageCsvPath: string;
-  private googleSheets?: GoogleSheetsService;
+  private queuedGoogleSheets?: QueuedGoogleSheetsService;
   private logger: Logger;
   private sourceCsvPath: string;
 
@@ -25,12 +25,12 @@ export class DailyAverageService {
     sourceCsvPath: string,
     dailyAverageCsvPath: string,
     logger: Logger,
-    googleSheets?: GoogleSheetsService
+    queuedGoogleSheets?: QueuedGoogleSheetsService
   ) {
     this.sourceCsvPath = sourceCsvPath;
     this.dailyAverageCsvPath = dailyAverageCsvPath;
     this.csvWriter = new CsvWriter(dailyAverageCsvPath);
-    this.googleSheets = googleSheets;
+    this.queuedGoogleSheets = queuedGoogleSheets;
     this.logger = logger;
   }
 
@@ -150,7 +150,7 @@ export class DailyAverageService {
     );
 
     // Save to Google Sheets if enabled
-    if (this.googleSheets) {
+    if (this.queuedGoogleSheets) {
       const sheetsRecord = {
         timestamp: record.date,
         playerCount: record.averagePlayerCount,
@@ -160,7 +160,9 @@ export class DailyAverageService {
         minPlayerCount: record.minPlayerCount,
         minPlayerTimestamp: record.minPlayerTimestamp
       };
-      savePromises.push(this.googleSheets.appendDailyAverageRecord(sheetsRecord));
+      savePromises.push(
+        this.queuedGoogleSheets.addDailyAverageRecord(sheetsRecord)
+      );
     }
 
     await Promise.all(savePromises);
