@@ -4,6 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Language**: When working in this repository, communicate with users in Japanese. Keep this CLAUDE.md file in English.
 
+**Documentation Synchronization**: 
+- **IMPORTANT**: This repository contains a Japanese version of this documentation in `仕様書.md`
+- Whenever this CLAUDE.md file is modified, you MUST also update `仕様書.md` to maintain synchronization
+- The Japanese version should reflect all changes made to the English CLAUDE.md file
+- Both files serve the same purpose but in different languages for accessibility
+
 **Git Operations**: 
 - ALWAYS ask for explicit user confirmation before running any git commit or git push commands
 - Never commit or push changes without user approval, even if the user asks to "complete the task" or similar
@@ -87,13 +93,24 @@ npm run watch              # Watch mode compilation
 npm run clean              # Clean dist directory
 npm run lint               # ESLint static analysis
 npm run typecheck          # TypeScript type checking
+npm run setup              # Install dependencies and build
+
+# Data management tools
 npm run calculate-daily-averages  # Manual daily average calculation tool
-npm run sync-google-sheets        # Sync local CSV data to Google Sheets
+npm run sync-google-sheets        # Manual CSV to Google Sheets synchronization
+
+# Release management
+npm run release            # Patch release (1.0.0 → 1.0.1)
+npm run release:minor      # Minor release (1.0.0 → 1.1.0)
+npm run release:major      # Major release (1.0.0 → 2.0.0)
+npm run prerelease         # Run tests before release
+npm run test:ci            # CI test suite (typecheck + lint)
+npm run prepare-release    # Full release preparation
 
 # Platform-specific scripts
-# Windows: build.bat, start.bat, setup.bat
-# Windows (PowerShell): build.ps1, start.ps1, setup.ps1  
-# Linux/macOS: build.sh, start.sh, setup.sh
+# Windows: build.bat, start.bat, setup.bat, sync-google-sheets.bat
+# Windows (PowerShell): build.ps1, start.ps1, setup.ps1, sync-google-sheets.ps1
+# Linux/macOS: build.sh, start.sh, setup.sh, sync-google-sheets.sh
 ```
 
 ## Architecture Overview
@@ -103,13 +120,14 @@ npm run sync-google-sheets        # Sync local CSV data to Google Sheets
 **Service-Oriented Design**:
 - `SteamApiService`: Fetches current player counts from Steam Web API
 - `CsvWriter`: Handles CSV file operations for data persistence
-- `GoogleSheetsService`: Optional Google Sheets integration for cloud storage
-- `DailyAverageService`: Calculates and manages daily player count averages
+- `GoogleSheetsService`: Direct Google Sheets integration for cloud storage
+- `QueuedGoogleSheetsService`: Rate limit-aware Google Sheets service with retry queue
+- `DailyAverageService`: Calculates and manages daily player count averages with max/min tracking
 - `Scheduler`: Manages cron-based data collection and daily calculations
 - `RetryHandler`: Implements exponential backoff retry logic
 - `Logger`: Winston-based logging with file rotation
 
-**Data Flow**: Steam API → Data Collection → Parallel Storage (CSV + Google Sheets) → Daily Average Calculation
+**Data Flow**: Steam API → Data Collection → Parallel Storage (CSV + Google Sheets with Queue) → Enhanced Daily Average Calculation (avg/max/min with timestamps)
 
 ## Configuration System
 
@@ -120,30 +138,60 @@ Configuration is environment-based using dotenv with validation in `src/config/c
 - `COLLECTION_MINUTES`: Comma-separated minutes for data collection (e.g., "0,30")
 - `DAILY_AVERAGE_HOUR`: Hour (0-23) for daily average calculation
 
+**Output Configuration**:
+- `CSV_OUTPUT_ENABLED`: Enable/disable CSV file output (default: true)
+- `CSV_FILE_PATH`: Path for main player data CSV file
+- `DAILY_AVERAGE_CSV_ENABLED`: Enable/disable daily average CSV output (default: true)
+- `DAILY_AVERAGE_CSV_FILE_PATH`: Path for daily averages CSV file
+
+**Retry and Logging Configuration**:
+- `MAX_RETRIES`: Maximum retry attempts for API calls (default: 3)
+- `RETRY_BASE_DELAY`: Base delay for retry logic in milliseconds (default: 1000)
+- `LOG_LEVEL`: Logging level (debug/info/warn/error, default: info)
+- `LOG_FILE_PATH`: Path for log file output
+
 **Optional Google Sheets Integration**:
 - Set `GOOGLE_SHEETS_ENABLED=true`
 - Configure `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`
+- `GOOGLE_SHEETS_SHEET_NAME`: Sheet name for player data (default: PlayerData)
+- `GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME`: Sheet name for daily averages (default: DailyAverages)
+- `GOOGLE_SHEETS_SYNC_ON_STARTUP`: Sync CSV data to sheets on startup (default: false)
 - Requires Google Cloud service account with Sheets API access
 
 ## Key Implementation Details
 
-**Error Handling**: Steam API returns 0 players are treated as failed requests and trigger retries
+**Error Handling**: 
+- Steam API returns 0 players are treated as failed requests and trigger retries
+- Google Sheets API rate limit failures are queued for automatic retry
+- QueuedGoogleSheetsService handles transient failures with exponential backoff
 
 **Startup Behavior**:
 1. Immediate data collection on startup
 2. Validation of Steam API connectivity  
 3. Check and calculate missing daily averages
-4. Schedule ongoing collection and daily calculations
+4. Optional CSV-to-Google Sheets sync (if GOOGLE_SHEETS_SYNC_ON_STARTUP=true)
+5. Schedule ongoing collection and daily calculations
 
 **File Structure**:
 - `src/index.ts`: Application entry point
 - `src/config/`: Configuration management and validation
 - `src/services/`: All business logic services
+  - `steamApi.ts`: Steam Web API integration
+  - `csvWriter.ts`: CSV file operations
+  - `googleSheets.ts`: Direct Google Sheets integration
+  - `queuedGoogleSheets.ts`: Rate limit-aware Google Sheets with retry queue
+  - `dailyAverageService.ts`: Daily statistics calculation with max/min tracking
+  - `scheduler.ts`: Cron-based scheduling system
+- `src/tools/`: Command-line utilities
+  - `calculateAllDailyAverages.ts`: Manual daily average calculation
+  - `syncGoogleSheets.ts`: CSV-to-Google Sheets synchronization tool
 - `src/types/`: TypeScript type definitions
 - `src/utils/`: Shared utilities (logging, retry logic)
-- `src/tools/`: Command-line utilities
 
 **Data Storage**: 
-- CSV files with timestamp,player_count format
+- **Main CSV**: timestamp,player_count format
+- **Daily Average CSV**: Enhanced format with date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp
 - Daily averages exclude zero values (API failures)
-- Google Sheets mirrors CSV structure in separate sheets
+- **Google Sheets**: Mirrors CSV structure in separate sheets (PlayerData + DailyAverages)
+- **Rate Limit Handling**: QueuedGoogleSheetsService manages API quotas and retries
+- **Manual Sync**: `npm run sync-google-sheets` for resolving data discrepancies
