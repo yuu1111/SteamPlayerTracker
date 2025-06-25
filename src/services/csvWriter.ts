@@ -27,15 +27,33 @@ export class CsvWriter {
     }
   }
 
-  async writeDailyAverageRecord(date: string, averagePlayerCount: number, sampleCount: number): Promise<void> {
+  async writeDailyAverageRecord(
+    date: string, 
+    averagePlayerCount: number, 
+    sampleCount: number,
+    maxPlayerCount?: number,
+    maxPlayerTimestamp?: string,
+    minPlayerCount?: number,
+    minPlayerTimestamp?: string
+  ): Promise<void> {
     try {
       await this.ensureDirectoryExists();
       
       const fileExists = await this.fileExists();
-      const csvLine = `${date},${averagePlayerCount},${sampleCount}\n`;
+      
+      // Build CSV line based on available data
+      let csvLine: string;
+      if (maxPlayerCount !== undefined && maxPlayerTimestamp && minPlayerCount !== undefined && minPlayerTimestamp) {
+        csvLine = `${date},${averagePlayerCount},${sampleCount},${maxPlayerCount},${maxPlayerTimestamp},${minPlayerCount},${minPlayerTimestamp}\n`;
+      } else {
+        // Backward compatibility: only write basic data if max/min not provided
+        csvLine = `${date},${averagePlayerCount},${sampleCount}\n`;
+      }
 
       if (!fileExists) {
-        const header = 'date,average_player_count,sample_count\n';
+        const header = maxPlayerCount !== undefined 
+          ? 'date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp\n'
+          : 'date,average_player_count,sample_count\n';
         await fs.writeFile(this.filePath, header + csvLine, 'utf8');
       } else {
         await fs.appendFile(this.filePath, csvLine, 'utf8');

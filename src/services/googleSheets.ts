@@ -8,6 +8,10 @@ export interface DailyAverageSheetRecord {
   timestamp: string;
   playerCount: number;
   sampleCount: number;
+  maxPlayerCount?: number;
+  maxPlayerTimestamp?: string;
+  minPlayerCount?: number;
+  minPlayerTimestamp?: string;
 }
 
 export class GoogleSheetsService {
@@ -90,11 +94,19 @@ export class GoogleSheetsService {
     try {
       await this.ensureDailyAverageHeaderExists();
       
-      const values = [[record.timestamp, record.playerCount, record.sampleCount]];
+      const values = [[
+        record.timestamp, 
+        record.playerCount, 
+        record.sampleCount,
+        record.maxPlayerCount || '',
+        record.maxPlayerTimestamp || '',
+        record.minPlayerCount || '',
+        record.minPlayerTimestamp || ''
+      ]];
       
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A:C`,
+        range: `${this.sheetName}!A:G`,
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         requestBody: {
@@ -110,17 +122,25 @@ export class GoogleSheetsService {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A1:C1`,
+        range: `${this.sheetName}!A1:G1`,
       });
 
       const values = response.data.values;
       if (!values || values.length === 0 || (values[0][0] !== 'date' && values[0][0] !== 'date (UTC)')) {
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${this.sheetName}!A1:C1`,
+          range: `${this.sheetName}!A1:G1`,
           valueInputOption: 'RAW',
           requestBody: {
-            values: [['date (UTC)', 'average_player_count', 'sample_count']],
+            values: [[
+              'date (UTC)', 
+              'average_player_count', 
+              'sample_count', 
+              'max_player_count', 
+              'max_timestamp (UTC)', 
+              'min_player_count', 
+              'min_timestamp (UTC)'
+            ]],
           },
         });
       }

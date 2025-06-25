@@ -8,6 +8,10 @@ export interface DailyAverageRecord {
   date: string;
   averagePlayerCount: number;
   sampleCount: number;
+  maxPlayerCount: number;
+  maxPlayerTimestamp: string;
+  minPlayerCount: number;
+  minPlayerTimestamp: string;
 }
 
 export class DailyAverageService {
@@ -53,10 +57,27 @@ export class DailyAverageService {
       const sum = validData.reduce((acc, record) => acc + record.playerCount, 0);
       const average = Math.round(sum / validData.length);
 
+      // Find max and min values with their timestamps
+      let maxRecord = validData[0];
+      let minRecord = validData[0];
+      
+      for (const record of validData) {
+        if (record.playerCount > maxRecord.playerCount) {
+          maxRecord = record;
+        }
+        if (record.playerCount < minRecord.playerCount) {
+          minRecord = record;
+        }
+      }
+
       const averageRecord: DailyAverageRecord = {
         date: dateStr,
         averagePlayerCount: average,
-        sampleCount: validData.length
+        sampleCount: validData.length,
+        maxPlayerCount: maxRecord.playerCount,
+        maxPlayerTimestamp: maxRecord.timestamp,
+        minPlayerCount: minRecord.playerCount,
+        minPlayerTimestamp: minRecord.timestamp
       };
 
       await this.saveAverageRecord(averageRecord);
@@ -64,7 +85,11 @@ export class DailyAverageService {
       this.logger.info(`Daily average calculated successfully for ${dateStr}`, {
         average,
         sampleCount: validData.length,
-        excludedZeros: dailyData.length - validData.length
+        excludedZeros: dailyData.length - validData.length,
+        max: averageRecord.maxPlayerCount,
+        maxTime: averageRecord.maxPlayerTimestamp,
+        min: averageRecord.minPlayerCount,
+        minTime: averageRecord.minPlayerTimestamp
       });
 
     } catch (error) {
@@ -111,12 +136,16 @@ export class DailyAverageService {
   private async saveAverageRecord(record: DailyAverageRecord): Promise<void> {
     const savePromises: Promise<void>[] = [];
 
-    // Save to CSV with sample count
+    // Save to CSV with all data including max/min
     savePromises.push(
       this.csvWriter.writeDailyAverageRecord(
         record.date,
         record.averagePlayerCount,
-        record.sampleCount
+        record.sampleCount,
+        record.maxPlayerCount,
+        record.maxPlayerTimestamp,
+        record.minPlayerCount,
+        record.minPlayerTimestamp
       )
     );
 
@@ -125,7 +154,11 @@ export class DailyAverageService {
       const sheetsRecord = {
         timestamp: record.date,
         playerCount: record.averagePlayerCount,
-        sampleCount: record.sampleCount
+        sampleCount: record.sampleCount,
+        maxPlayerCount: record.maxPlayerCount,
+        maxPlayerTimestamp: record.maxPlayerTimestamp,
+        minPlayerCount: record.minPlayerCount,
+        minPlayerTimestamp: record.minPlayerTimestamp
       };
       savePromises.push(this.googleSheets.appendDailyAverageRecord(sheetsRecord));
     }
