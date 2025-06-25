@@ -51,6 +51,7 @@ npm run clean              # Clean dist directory
 npm run lint               # ESLint static analysis
 npm run typecheck          # TypeScript type checking
 npm run calculate-daily-averages  # Manual daily average calculation tool
+npm run sync-google-sheets        # Sync local CSV data to Google Sheets
 
 # Platform-specific scripts
 # Windows: build.bat, start.bat, setup.bat

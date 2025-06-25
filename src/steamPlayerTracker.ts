@@ -7,6 +7,7 @@ import { Scheduler } from './services/scheduler';
 import { RetryHandler } from './utils/retry';
 import { Logger } from './utils/logger';
 import { PlayerDataRecord } from './types/config';
+import { syncPlayerData, syncDailyAverages } from './tools/syncGoogleSheets';
 
 export class SteamPlayerTracker {
   private steamApi: SteamApiService;
@@ -91,6 +92,27 @@ export class SteamPlayerTracker {
         }
       } catch (error) {
         this.logger.warn('Failed to get game name', { error: error instanceof Error ? error.message : String(error) });
+      }
+      
+      // Sync with Google Sheets if enabled and requested
+      if (config.googleSheets?.enabled && config.googleSheets?.syncOnStartup) {
+        this.logger.info('Syncing local CSV data with Google Sheets...');
+        try {
+          // Sync player data
+          if (this.googleSheets) {
+            await syncPlayerData(this.googleSheets);
+            this.logger.info('Player data sync completed');
+          }
+          
+          // Sync daily averages if enabled
+          if (config.output.dailyAverageCsvEnabled && this.dailyAverageGoogleSheets) {
+            await syncDailyAverages(this.dailyAverageGoogleSheets);
+            this.logger.info('Daily average data sync completed');
+          }
+        } catch (error) {
+          this.logger.error('Google Sheets sync failed', { error: error instanceof Error ? error.message : String(error) });
+          // Continue execution even if sync fails
+        }
       }
       
       // Collect data immediately on startup

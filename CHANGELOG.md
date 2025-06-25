@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 
+## [X.X.X] - YYYY-MM-DD JST
+
+### Added
+- Daily max/min player counts with timestamps in statistics
+- CSV and Google Sheets sync functionality to handle data discrepancies
+- `npm run sync-google-sheets` command for manual data synchronization
+- `GOOGLE_SHEETS_SYNC_ON_STARTUP` environment variable for automatic sync on startup
+- Extended daily averages CSV format with max_player_count, max_timestamp, min_player_count, min_timestamp columns
+- Enhanced Google Sheets integration with duplicate detection and data update capabilities
+
+### Enhanced
+- Daily average records now include peak and low player counts with their exact timestamps
+- Google Sheets service automatically prevents duplicate entries by checking timestamps
+- Startup process can optionally sync local CSV data with Google Sheets
+- Daily statistics logging now includes max/min values and their timestamps
+
+### Technical
+- Extended `DailyAverageRecord` interface with max/min tracking fields
+- Improved `GoogleSheetsService` with `findRecordByTimestamp` and `findDailyAverageRecordByDate` methods
+- Added `syncGoogleSheets.ts` tool for comprehensive data synchronization
+- Enhanced CSV writer with backward compatibility for extended daily average format
+
 ## [1.1.4] - 2025-06-24 JST
 
 ### Added

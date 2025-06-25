@@ -49,6 +49,7 @@ function validateConfig(): Config {
       sheetName: process.env.GOOGLE_SHEETS_SHEET_NAME || 'PlayerData',
       dailyAverageSheetName: process.env.GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME || 'DailyAverages',
       serviceAccountKeyPath: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
+      syncOnStartup: process.env.GOOGLE_SHEETS_SYNC_ON_STARTUP === 'true',
     };
 
     if (!config.googleSheets.spreadsheetId) {

@@ -7,6 +7,28 @@
 
 **言語:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 
+## [X.X.X] - YYYY-MM-DD JST
+
+### 追加
+- 日次統計に最高値・最低値のプレイヤー数とその時刻を追加
+- データの差異を処理するCSVとGoogle Sheetsの同期機能
+- 手動データ同期用の `npm run sync-google-sheets` コマンド
+- 起動時自動同期のための `GOOGLE_SHEETS_SYNC_ON_STARTUP` 環境変数
+- max_player_count、max_timestamp、min_player_count、min_timestampカラムを含む拡張日次平均CSVフォーマット
+- 重複検出とデータ更新機能を備えた強化されたGoogle Sheets統合
+
+### 強化
+- 日次平均レコードにピークと最低プレイヤー数の正確な時刻を含める
+- Google Sheetsサービスがタイムスタンプをチェックして重複エントリを自動的に防止
+- 起動プロセスで任意でローカルCSVデータをGoogle Sheetsと同期
+- 日次統計ログに最大値・最小値とその時刻を含める
+
+### 技術的変更
+- 最大値・最小値追跡フィールドを含む `DailyAverageRecord` インターフェースの拡張
+- `findRecordByTimestamp` と `findDailyAverageRecordByDate` メソッドを含む改良された `GoogleSheetsService`
+- 包括的なデータ同期のための `syncGoogleSheets.ts` ツールの追加
+- 拡張日次平均フォーマットの下位互換性を持つCSVライターの強化
+
 ## [1.1.4] - 2025-06-24 JST
 
 ### 追加

@@ -31,6 +31,7 @@ export interface Config {
     sheetName?: string;
     dailyAverageSheetName?: string;
     serviceAccountKeyPath?: string;
+    syncOnStartup?: boolean;
   };
 }
 

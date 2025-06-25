@@ -46,19 +46,65 @@ export class GoogleSheetsService {
     try {
       await this.ensureHeaderExists();
       
+      // Check if a record for this timestamp already exists
+      const existingRowIndex = await this.findRecordByTimestamp(record.timestamp);
+      
       const values = [[record.timestamp, record.playerCount]];
       
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A:B`,
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        requestBody: {
-          values: values,
-        },
-      });
+      if (existingRowIndex !== null) {
+        // Update existing record
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A${existingRowIndex}:B${existingRowIndex}`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: values,
+          },
+        });
+      } else {
+        // Append new record
+        await this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A:B`,
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          requestBody: {
+            values: values,
+          },
+        });
+      }
     } catch (error) {
-      throw new Error(`Failed to append record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to append/update record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async findRecordByTimestamp(timestamp: string): Promise<number | null> {
+    try {
+      // Get all values from the timestamp column (column A)
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${this.sheetName}!A:A`,
+      });
+
+      const values = response.data.values;
+      if (!values || values.length <= 1) {
+        return null;
+      }
+
+      // Search for the timestamp in the column (skip header at index 0)
+      for (let i = 1; i < values.length; i++) {
+        if (values[i][0] === timestamp) {
+          return i + 1; // Return 1-based row index for Google Sheets
+        }
+      }
+
+      return null;
+    } catch (error) {
+      // If the sheet doesn't exist yet, return null
+      if (error instanceof Error && error.message.includes('Unable to parse range')) {
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -94,6 +140,9 @@ export class GoogleSheetsService {
     try {
       await this.ensureDailyAverageHeaderExists();
       
+      // Check if a record for this date already exists
+      const existingRowIndex = await this.findDailyAverageRecordByDate(record.timestamp);
+      
       const values = [[
         record.timestamp, 
         record.playerCount, 
@@ -104,17 +153,60 @@ export class GoogleSheetsService {
         record.minPlayerTimestamp || ''
       ]];
       
-      await this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A:G`,
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        requestBody: {
-          values: values,
-        },
-      });
+      if (existingRowIndex !== null) {
+        // Update existing record
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A${existingRowIndex}:G${existingRowIndex}`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: values,
+          },
+        });
+      } else {
+        // Append new record
+        await this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A:G`,
+          valueInputOption: 'RAW',
+          insertDataOption: 'INSERT_ROWS',
+          requestBody: {
+            values: values,
+          },
+        });
+      }
     } catch (error) {
-      throw new Error(`Failed to append daily average record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to append/update daily average record to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async findDailyAverageRecordByDate(date: string): Promise<number | null> {
+    try {
+      // Get all values from the date column (column A)
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${this.sheetName}!A:A`,
+      });
+
+      const values = response.data.values;
+      if (!values || values.length <= 1) {
+        return null;
+      }
+
+      // Search for the date in the column (skip header at index 0)
+      for (let i = 1; i < values.length; i++) {
+        if (values[i][0] === date) {
+          return i + 1; // Return 1-based row index for Google Sheets
+        }
+      }
+
+      return null;
+    } catch (error) {
+      // If the sheet doesn't exist yet, return null
+      if (error instanceof Error && error.message.includes('Unable to parse range')) {
+        return null;
+      }
+      throw error;
     }
   }
 

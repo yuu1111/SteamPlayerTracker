@@ -12,6 +12,7 @@
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
     "calculate-daily-averages": "ts-node src/tools/calculateAllDailyAverages.ts",
+    "sync-google-sheets": "ts-node src/tools/syncGoogleSheets.ts",
     "setup": "npm install && npm run build",
     "release": "node scripts/release.js",
     "release:minor": "node scripts/release.js minor",
