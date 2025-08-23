@@ -19,7 +19,7 @@ export class SessionFileTransport extends winston.transports.File {
     const currentTime = dayjs.utc();
     const dirName = currentTime.format('YYYY-MM-DD-HHmm');
     const baseDir = options.baseDir ?? path.join(process.cwd(), 'logs');
-    const logPath = path.join(baseDir, 'sessions', dirName, 'app.log');
+    const logPath = path.join(baseDir, dirName, 'app.log');
 
     // ディレクトリを作成
     const dirPath = path.dirname(logPath);
@@ -46,7 +46,7 @@ export class SessionErrorFileTransport extends SessionFileTransport {
     const currentTime = dayjs.utc();
     const dirName = currentTime.format('YYYY-MM-DD-HHmm');
     const baseDir = options?.baseDir ?? path.join(process.cwd(), 'logs');
-    const logPath = path.join(baseDir, 'sessions', dirName, 'error.log');
+    const logPath = path.join(baseDir, dirName, 'error.log');
 
     super({
       ...options,
@@ -58,11 +58,11 @@ export class SessionErrorFileTransport extends SessionFileTransport {
 
 /**
  * 古いセッションログディレクトリを削除するユーティリティ関数
- * ./logs/sessions/内のYYYY-MM-DD-HHmm形式のディレクトリを削除
+ * ./logs/内のYYYY-MM-DD-HHmm形式のディレクトリを削除
  * @param daysToKeep 保持する日数（デフォルト: 7日）
  */
 export function cleanOldLogs(daysToKeep = 7): void {
-  const sessionsDir = path.join(process.cwd(), 'logs', 'sessions');
+  const sessionsDir = path.join(process.cwd(), 'logs', );
 
   if (!fs.existsSync(sessionsDir)) {
     return;

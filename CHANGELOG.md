@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
 
+## [1.3.0] - 2025-06-25 JST
+
+### Added
+- **Chart Generation Feature**: New capability to generate visual charts from CSV data
+  - Player count trend charts (1-day, 7-day, 30-day periods)
+  - Daily statistics charts with average, max, and min values (7-day, 30-day, 60-day periods)
+  - High-resolution PNG output (1600x900px) using Chart.js
+  - `npm run generate-charts` command for chart generation
+  - Flexible command-line options for specific chart types and time periods
+- **Session-based Logging**: New Winston transport for session-specific log files
+  - Logs organized by session timestamp (YYYY-MM-DD-HHmm format)
+  - Automatic old log cleanup utility
+  - Separate error log files for better debugging
+- **Process Management Script**: Added `Kill-SteamTracker.ps1` for Windows process management
+
+### Changed
+- **Logger System Refactoring**: Migrated from legacy Logger class to unified createLogger function
+  - Improved type safety with TypeScript
+  - Better module isolation with child loggers
+  - Enhanced log formatting with module context
+- **Performance Optimizations**:
+  - Replaced ts-node with pre-compiled JavaScript execution (faster startup)
+  - Optimized Google Sheets sync to use bulk uploads instead of individual requests
+  - Reduced API rate limit issues with batch processing
+- **Tool Scripts Enhancement**:
+  - `calculate-daily-averages` now performs bulk Google Sheets upload
+  - `sync-google-sheets` includes explicit process termination
+  - All tools now use compiled JavaScript for better performance
+
+### Fixed
+- Google Sheets rate limiting issues in daily average calculations
+- Process hanging after Google Sheets operations (added explicit exit)
+- ESLint errors and warnings in the codebase
+- Type safety issues with Winston logger integration
+
+### Technical
+- Removed legacy Logger class in favor of functional approach
+- Updated all imports from Logger to createLogger
+- Added chart.js, chartjs-node-canvas, and date-fns dependencies
+- Improved TypeScript type definitions throughout the codebase
+
 ## [1.2.0] - 2025-06-25 JST
 
 ### Added
