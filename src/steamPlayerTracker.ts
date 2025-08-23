@@ -6,7 +6,7 @@ import { QueuedGoogleSheetsService } from './services/queuedGoogleSheets';
 import { DailyAverageService } from './services/dailyAverageService';
 import { Scheduler } from './services/scheduler';
 import { RetryHandler } from './utils/retry';
-import { Logger } from './utils/logger';
+import { createLogger } from './utils/logger';
 import { PlayerDataRecord } from './types/config';
 
 export class SteamPlayerTracker {
@@ -18,11 +18,11 @@ export class SteamPlayerTracker {
   private dailyAverageService?: DailyAverageService;
   private scheduler: Scheduler;
   private retryHandler: RetryHandler;
-  private logger: Logger;
+  private logger: ReturnType<typeof createLogger>;
   private gameName?: string;
 
   constructor() {
-    this.logger = new Logger(config.logging.level, config.logging.filePath);
+    this.logger = createLogger('SteamPlayerTracker');
     this.steamApi = new SteamApiService();
     this.csvWriter = new CsvWriter(config.output.csvFilePath);
     this.scheduler = new Scheduler();

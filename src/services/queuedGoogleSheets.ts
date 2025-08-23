@@ -1,6 +1,6 @@
 import { GoogleSheetsService, DailyAverageSheetRecord } from './googleSheets';
 import { PlayerDataRecord } from '../types/config';
-import { Logger } from '../utils/logger';
+import { createLogger } from '../utils/logger';
 
 interface QueuedRecord {
   type: 'player' | 'dailyAverage';
@@ -14,18 +14,18 @@ export class QueuedGoogleSheetsService {
   private dailyAverageSheets?: GoogleSheetsService;
   private queue: QueuedRecord[] = [];
   private isProcessing: boolean = false;
-  private logger: Logger;
+  private logger: ReturnType<typeof createLogger>;
   private maxRetries: number = 3;
   private retryInterval: number = 30000; // 30 seconds
 
   constructor(
     playerDataSheets?: GoogleSheetsService,
     dailyAverageSheets?: GoogleSheetsService,
-    logger?: Logger
+    logger?: ReturnType<typeof createLogger>
   ) {
     this.playerDataSheets = playerDataSheets;
     this.dailyAverageSheets = dailyAverageSheets;
-    this.logger = logger || new Logger('info', 'logs/queued-sheets.log');
+    this.logger = logger || createLogger('QueuedGoogleSheets');
     
     // Start processing queue
     this.startQueueProcessor();

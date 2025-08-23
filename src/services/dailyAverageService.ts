@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import { CsvWriter } from './csvWriter';
 import { QueuedGoogleSheetsService } from './queuedGoogleSheets';
 import { PlayerDataRecord } from '../types/config';
-import { Logger } from '../utils/logger';
+import { createLogger } from '../utils/logger';
 
 export interface DailyAverageRecord {
   date: string;
@@ -18,13 +18,13 @@ export class DailyAverageService {
   private csvWriter: CsvWriter;
   private dailyAverageCsvPath: string;
   private queuedGoogleSheets?: QueuedGoogleSheetsService;
-  private logger: Logger;
+  private logger: ReturnType<typeof createLogger>;
   private sourceCsvPath: string;
 
   constructor(
     sourceCsvPath: string,
     dailyAverageCsvPath: string,
-    logger: Logger,
+    logger: ReturnType<typeof createLogger>,
     queuedGoogleSheets?: QueuedGoogleSheetsService
   ) {
     this.sourceCsvPath = sourceCsvPath;

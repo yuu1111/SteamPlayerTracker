@@ -1,11 +1,11 @@
 import { promises as fs } from 'fs';
 import { resolve } from 'path';
 import { GoogleSheetsService } from '../services/googleSheets';
-import { Logger } from '../utils/logger';
+import { createLogger } from '../utils/logger';
 import { config } from '../config/config';
 import { PlayerDataRecord } from '../types/config';
 
-const logger = new Logger('info', 'logs/sync-sheets.log');
+const logger = createLogger('sync-google-sheets');
 
 async function readCsvFile(filePath: string): Promise<string[][]> {
   try {
@@ -137,6 +137,9 @@ async function main(): Promise<void> {
     
     logger.info('All data synced successfully');
     console.log('✅ Google Sheets sync completed successfully!');
+    
+    // Explicitly exit to ensure all connections are closed
+    process.exit(0);
     
   } catch (error) {
     logger.error(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
