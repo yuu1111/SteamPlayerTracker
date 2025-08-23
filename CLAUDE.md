@@ -1,197 +1,178 @@
-# CLAUDE.md
+# CLAUDE.MD
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリでコードを扱う際のClaude Code (claude.ai/code)へのガイダンスを提供します。
 
-**Language**: When working in this repository, communicate with users in Japanese. Keep this CLAUDE.md file in English.
+**言語**: このリポジトリで作業する際は、ユーザーと日本語でコミュニケーションを取ってください。
 
-**Documentation Synchronization**: 
-- **IMPORTANT**: This repository contains a Japanese version of this documentation in `仕様書.md`
-- Whenever this CLAUDE.md file is modified, you MUST also update `仕様書.md` to maintain synchronization
-- The Japanese version should reflect all changes made to the English CLAUDE.md file
-- Both files serve the same purpose but in different languages for accessibility
+**Git操作**:
+- git commitやgit pushコマンドを実行する前に、必ずユーザーの明示的な確認を取ってください
+- ユーザーの承認なしに、「タスクを完了して」などの指示があっても、変更をコミットやプッシュしないでください
+- コミットの準備ができたら、「これらの変更をコミット・プッシュしてもよろしいですか？」と確認してください
 
-**Git Operations**: 
-- ALWAYS ask for explicit user confirmation before running any git commit or git push commands
-- Never commit or push changes without user approval, even if the user asks to "complete the task" or similar
-- When ready to commit, present a summary of changes and ask: "これらの変更をコミット・プッシュしてもよろしいですか？"
+**コミットメッセージ形式**: 適切なプレフィックスを使用したconventional commitフォーマットを使用してください：
+- `feat:` 新機能
+- `fix:` バグ修正
+- `docs:` ドキュメント更新
+- `style:` フォーマット変更
+- `refactor:` コードリファクタリング
+- `test:` テスト追加
+- `chore:` メンテナンスタスク
 
-**Commit Message Format**: Use conventional commit format with appropriate prefixes:
-- `feat:` for new features
-- `fix:` for bug fixes  
-- `docs:` for documentation updates
-- `style:` for formatting changes
-- `refactor:` for code refactoring
-- `test:` for adding tests
-- `chore:` for maintenance tasks
+例: `feat: 自動リリースシステムを追加` または `fix: ESLint警告を解決`
 
-Example: `feat: add automated release system` or `fix: resolve ESLint warnings`
+**リリース管理**:
+- リリースを作成する際は、必ずCHANGELOG.mdとCHANGELOG-JP.mdを適切なバージョン番号で更新してください
+- **未リリースの変更には「## [X.X.X] - YYYY-MM-DD JST」のプレースホルダー形式を使用**し、「Unreleased」は使用しないでください
+- X.X.Xを実際のバージョン番号に置き換えるのは、リリース作成時のみです
+- リリースプロセス中に変更のタイプ（patch/minor/major）に基づいてバージョン番号を決定してください
+- 公式リリースまでCHANGELOGはプレースホルダー形式を使用してください
+- リリースコミットと機能コミットにはconventional commitフォーマットを使用してください
+- **重要**: CHANGELOGの全ての日付はJST（日本標準時）形式である必要があります
+- 日付形式: "YYYY-MM-DD JST"（例: "2025-06-24 JST"）
 
-**Commit Organization**: 
-- When multiple files are changed, split commits logically by functionality or purpose
-- Avoid large monolithic commits that combine unrelated changes
-- Group related file changes together (e.g., source code + tests, documentation updates, configuration changes)
-- Separate functional changes from documentation/formatting changes
-- Each commit should represent a single logical unit of work
-- **IMPORTANT**: Always divide implementation work into logical commits and push separately:
-  - Core functionality changes (services, business logic)
-  - Configuration and setup changes
-  - Platform-specific scripts (.ps1, .sh, .bat files)
-  - Documentation updates
-  - Each commit should have a clear, focused purpose and be pushed immediately after completion
-
-**Release Management**: 
-- When creating releases, always update CHANGELOG.md and CHANGELOG-JP.md with proper version numbers
-- **Use placeholder format "## [X.X.X] - YYYY-MM-DD JST"** for unreleased changes instead of "Unreleased"
-- Replace X.X.X with actual version number only when creating the release
-- Determine the version number based on the type of changes (patch/minor/major) during release process
-- Ensure CHANGELOGs use placeholder format until official release
-- Use conventional commit format for release commits and feature commits
-- **IMPORTANT**: All dates in CHANGELOGs must be in JST (Japan Standard Time) format
-- Date format: "YYYY-MM-DD JST" (e.g., "2025-06-24 JST")
-
-**Release Process Workflow**:
-1. **Complete all development work** and ensure all commits are pushed
-2. **Run automated release command**:
+**リリースプロセスワークフロー**:
+1. **全ての開発作業を完了**し、全てのコミットがプッシュされていることを確認
+2. **自動リリースコマンドを実行**:
    ```bash
-   npm run release          # Patch release (1.0.0 → 1.0.1)
-   npm run release:minor    # Minor release (1.0.0 → 1.1.0) 
-   npm run release:major    # Major release (1.0.0 → 2.0.0)
+   npm run release          # パッチリリース（1.0.0 → 1.0.1）
+   npm run release:minor    # マイナーリリース（1.0.0 → 1.1.0）
+   npm run release:major    # メジャーリリース（1.0.0 → 2.0.0）
    ```
-   This automatically:
-   - Cleans dependencies and rebuilds
-   - Runs type checking and linting
-   - Updates package.json version
-   - Creates release commit and Git tag
-3. **Update CHANGELOG placeholders** to actual version and JST date:
-   - Replace "## [X.X.X] - YYYY-MM-DD JST" → "## [1.2.0] - 2025-06-25 JST"
-   - Update both CHANGELOG.md and CHANGELOG-JP.md
-4. **Update README documentation** if new features were added:
-   - Update feature lists, usage examples, and command references
-   - Ensure both README.md and README-JP.md are synchronized
-5. **Commit documentation updates**:
+   これにより自動的に：
+   - 依存関係をクリーンアップして再ビルド
+   - 型チェックとリンティングを実行
+   - package.jsonのバージョンを更新
+   - リリースコミットとGitタグを作成
+3. **CHANGELOGプレースホルダーを実際のバージョンとJST日付に更新**:
+   - "## [X.X.X] - YYYY-MM-DD JST" → "## [1.2.0] - 2025-06-25 JST"に置換
+   - CHANGELOG.mdとCHANGELOG-JP.mdの両方を更新
+4. **新機能が追加された場合はREADMEドキュメントを更新**:
+   - 機能リスト、使用例、コマンドリファレンスを更新
+   - README.mdとREADME-JP.mdの両方が同期されていることを確認
+5. **ドキュメント更新をコミット**:
    ```bash
    git add CHANGELOG.md CHANGELOG-JP.md README.md README-JP.md
-   git commit -m "docs: finalize vX.X.X release documentation"
+   git commit -m "docs: vX.X.Xリリースドキュメントを最終化"
    ```
-6. **Push release to remote**:
+6. **リリースをリモートにプッシュ**:
    ```bash
-   git push origin main      # Push release commits
-   git push origin vX.X.X    # Push version tag
+   git push origin main      # リリースコミットをプッシュ
+   git push origin vX.X.X    # バージョンタグをプッシュ
    ```
-7. **GitHub Actions automatically creates release artifacts** with tar.gz and zip files
+7. **GitHub Actionsが自動的にリリース成果物を作成**（tar.gzとzipファイル）
 
-## Development Commands
+## 開発コマンド
 
 ```bash
-# Build and run
-npm run build              # Compile TypeScript to dist/
-npm start                  # Run compiled application
-npm run dev                # Run in development mode with ts-node
+# ビルドと実行
+npm run build              # TypeScriptをdist/にコンパイル
+npm start                  # コンパイル済みアプリケーションを実行
+npm run dev                # ts-nodeで開発モード実行
 
-# Development tools
-npm run watch              # Watch mode compilation
-npm run clean              # Clean dist directory
-npm run lint               # ESLint static analysis
-npm run typecheck          # TypeScript type checking
-npm run setup              # Install dependencies and build
+# 開発ツール
+npm run watch              # ウォッチモードコンパイル
+npm run clean              # distディレクトリをクリーン
+npm run lint               # ESLint静的解析
+npm run typecheck          # TypeScript型チェック
+npm run setup              # 依存関係インストールとビルド
 
-# Data management tools
-npm run calculate-daily-averages  # Manual daily average calculation tool
-npm run sync-google-sheets        # Manual CSV to Google Sheets synchronization
+# データ管理ツール
+npm run calculate-daily-averages  # 手動日次平均計算ツール
+npm run sync-google-sheets        # 手動CSV-Google Sheets同期
 
-# Release management
-npm run release            # Patch release (1.0.0 → 1.0.1)
-npm run release:minor      # Minor release (1.0.0 → 1.1.0)
-npm run release:major      # Major release (1.0.0 → 2.0.0)
-npm run prerelease         # Run tests before release
-npm run test:ci            # CI test suite (typecheck + lint)
-npm run prepare-release    # Full release preparation
+# リリース管理
+npm run release            # パッチリリース（1.0.0 → 1.0.1）
+npm run release:minor      # マイナーリリース（1.0.0 → 1.1.0）
+npm run release:major      # メジャーリリース（1.0.0 → 2.0.0）
+npm run prerelease         # リリース前テスト実行
+npm run test:ci            # CIテストスイート（型チェック + リント）
+npm run prepare-release    # 完全なリリース準備
 
-# Platform-specific scripts
+# プラットフォーム固有スクリプト
 # Windows: build.bat, start.bat, setup.bat, sync-google-sheets.bat
 # Windows (PowerShell): build.ps1, start.ps1, setup.ps1, sync-google-sheets.ps1
 # Linux/macOS: build.sh, start.sh, setup.sh, sync-google-sheets.sh
 ```
 
-## Architecture Overview
+## アーキテクチャ概要
 
-**Main Class**: `SteamPlayerTracker` (src/steamPlayerTracker.ts) - Central coordinator that orchestrates all services
+**メインクラス**: `SteamPlayerTracker` (src/steamPlayerTracker.ts) - 全サービスを統制する中央コーディネーター
 
-**Service-Oriented Design**:
-- `SteamApiService`: Fetches current player counts from Steam Web API
-- `CsvWriter`: Handles CSV file operations for data persistence
-- `GoogleSheetsService`: Direct Google Sheets integration for cloud storage
-- `QueuedGoogleSheetsService`: Rate limit-aware Google Sheets service with retry queue
-- `DailyAverageService`: Calculates and manages daily player count averages with max/min tracking
-- `Scheduler`: Manages cron-based data collection and daily calculations
-- `RetryHandler`: Implements exponential backoff retry logic
-- `Logger`: Winston-based logging with file rotation
+**サービス指向設計**:
+- `SteamApiService`: Steam Web APIから現在のプレイヤー数を取得
+- `CsvWriter`: データ永続化のためのCSVファイル操作を処理
+- `GoogleSheetsService`: クラウドストレージのための直接Google Sheets統合
+- `QueuedGoogleSheetsService`: リトライキュー付きレート制限対応Google Sheetsサービス
+- `DailyAverageService`: 最大/最小追跡付き日次プレイヤー数平均を計算・管理
+- `Scheduler`: cronベースのデータ収集と日次計算を管理
+- `RetryHandler`: 指数関数的バックオフリトライロジックを実装
+- `Logger`: ファイルローテーション付きWinstonベースログ
 
-**Data Flow**: Steam API → Data Collection → Parallel Storage (CSV + Google Sheets with Queue) → Enhanced Daily Average Calculation (avg/max/min with timestamps)
+**データフロー**: Steam API → データ収集 → 並列ストレージ（キュー付きCSV + Google Sheets） → 拡張日次平均計算（平均/最大/最小とタイムスタンプ）
 
-## Configuration System
+## 設定システム
 
-Configuration is environment-based using dotenv with validation in `src/config/config.ts`:
+設定は`src/config/config.ts`でバリデーション付きdotenvを使用した環境ベースです：
 
-**Required**: Copy `.env.example` to `.env` and configure:
-- `STEAM_APP_ID`: Steam game App ID to track
-- `COLLECTION_MINUTES`: Comma-separated minutes for data collection (e.g., "0,30")
-- `DAILY_AVERAGE_HOUR`: Hour (0-23) for daily average calculation
+**必須**: `.env.example`を`.env`にコピーして設定：
+- `STEAM_APP_ID`: 追跡するSteamゲームApp ID
+- `COLLECTION_MINUTES`: データ収集のためのカンマ区切り分（例："0,30"）
+- `DAILY_AVERAGE_HOUR`: 日次平均計算時刻（0-23）
 
-**Output Configuration**:
-- `CSV_OUTPUT_ENABLED`: Enable/disable CSV file output (default: true)
-- `CSV_FILE_PATH`: Path for main player data CSV file
-- `DAILY_AVERAGE_CSV_ENABLED`: Enable/disable daily average CSV output (default: true)
-- `DAILY_AVERAGE_CSV_FILE_PATH`: Path for daily averages CSV file
+**出力設定**:
+- `CSV_OUTPUT_ENABLED`: CSVファイル出力の有効/無効（デフォルト: true）
+- `CSV_FILE_PATH`: メインプレイヤーデータCSVファイルのパス
+- `DAILY_AVERAGE_CSV_ENABLED`: 日次平均CSV出力の有効/無効（デフォルト: true）
+- `DAILY_AVERAGE_CSV_FILE_PATH`: 日次平均CSVファイルのパス
 
-**Retry and Logging Configuration**:
-- `MAX_RETRIES`: Maximum retry attempts for API calls (default: 3)
-- `RETRY_BASE_DELAY`: Base delay for retry logic in milliseconds (default: 1000)
-- `LOG_LEVEL`: Logging level (debug/info/warn/error, default: info)
-- `LOG_FILE_PATH`: Path for log file output
+**リトライとログ設定**:
+- `MAX_RETRIES`: API呼び出しの最大リトライ回数（デフォルト: 3）
+- `RETRY_BASE_DELAY`: リトライロジックの基本遅延（ミリ秒、デフォルト: 1000）
+- `LOG_LEVEL`: ログレベル（debug/info/warn/error、デフォルト: info）
+- `LOG_FILE_PATH`: ログファイル出力のパス
 
-**Optional Google Sheets Integration**:
-- Set `GOOGLE_SHEETS_ENABLED=true`
-- Configure `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`
-- `GOOGLE_SHEETS_SHEET_NAME`: Sheet name for player data (default: PlayerData)
-- `GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME`: Sheet name for daily averages (default: DailyAverages)
-- `GOOGLE_SHEETS_SYNC_ON_STARTUP`: Sync CSV data to sheets on startup (default: false)
-- Requires Google Cloud service account with Sheets API access
+**オプショナルGoogle Sheets統合**:
+- `GOOGLE_SHEETS_ENABLED=true`に設定
+- `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`を設定
+- `GOOGLE_SHEETS_SHEET_NAME`: プレイヤーデータのシート名（デフォルト: PlayerData）
+- `GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME`: 日次平均のシート名（デフォルト: DailyAverages）
+- `GOOGLE_SHEETS_SYNC_ON_STARTUP`: 起動時にCSVデータをシートに同期（デフォルト: false）
+- Google Sheets API アクセス権限を持つGoogle Cloudサービスアカウントが必要
 
-## Key Implementation Details
+## 主要実装詳細
 
-**Error Handling**: 
-- Steam API returns 0 players are treated as failed requests and trigger retries
-- Google Sheets API rate limit failures are queued for automatic retry
-- QueuedGoogleSheetsService handles transient failures with exponential backoff
+**エラーハンドリング**:
+- Steam APIが0プレイヤーを返す場合、失敗したリクエストとして扱いリトライをトリガー
+- Google Sheets APIレート制限失敗は自動リトライのためキューに追加
+- QueuedGoogleSheetsServiceが指数関数的バックオフで一時的失敗を処理
 
-**Startup Behavior**:
-1. Immediate data collection on startup
-2. Validation of Steam API connectivity  
-3. Check and calculate missing daily averages
-4. Optional CSV-to-Google Sheets sync (if GOOGLE_SHEETS_SYNC_ON_STARTUP=true)
-5. Schedule ongoing collection and daily calculations
+**起動時動作**:
+1. 起動時の即座データ収集
+2. Steam API接続性の検証
+3. 欠損日次平均の確認と計算
+4. オプショナルCSV-Google Sheets同期（GOOGLE_SHEETS_SYNC_ON_STARTUP=trueの場合）
+5. 継続的収集と日次計算のスケジュール
 
-**File Structure**:
-- `src/index.ts`: Application entry point
-- `src/config/`: Configuration management and validation
-- `src/services/`: All business logic services
-  - `steamApi.ts`: Steam Web API integration
-  - `csvWriter.ts`: CSV file operations
-  - `googleSheets.ts`: Direct Google Sheets integration
-  - `queuedGoogleSheets.ts`: Rate limit-aware Google Sheets with retry queue
-  - `dailyAverageService.ts`: Daily statistics calculation with max/min tracking
-  - `scheduler.ts`: Cron-based scheduling system
-- `src/tools/`: Command-line utilities
-  - `calculateAllDailyAverages.ts`: Manual daily average calculation
-  - `syncGoogleSheets.ts`: CSV-to-Google Sheets synchronization tool
-- `src/types/`: TypeScript type definitions
-- `src/utils/`: Shared utilities (logging, retry logic)
+**ファイル構造**:
+- `src/index.ts`: アプリケーションエントリーポイント
+- `src/config/`: 設定管理とバリデーション
+- `src/services/`: 全ビジネスロジックサービス
+  - `steamApi.ts`: Steam Web API統合
+  - `csvWriter.ts`: CSVファイル操作
+  - `googleSheets.ts`: 直接Google Sheets統合
+  - `queuedGoogleSheets.ts`: リトライキュー付きレート制限対応Google Sheets
+  - `dailyAverageService.ts`: 最大/最小追跡付き日次統計計算
+  - `scheduler.ts`: cronベーススケジューリングシステム
+- `src/tools/`: コマンドラインユーティリティ
+  - `calculateAllDailyAverages.ts`: 手動日次平均計算
+  - `syncGoogleSheets.ts`: CSV-Google Sheets同期ツール
+- `src/types/`: TypeScript型定義
+- `src/utils/`: 共有ユーティリティ（ログ、リトライロジック）
 
-**Data Storage**: 
-- **Main CSV**: timestamp,player_count format
-- **Daily Average CSV**: Enhanced format with date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp
-- Daily averages exclude zero values (API failures)
-- **Google Sheets**: Mirrors CSV structure in separate sheets (PlayerData + DailyAverages)
-- **Rate Limit Handling**: QueuedGoogleSheetsService manages API quotas and retries
-- **Manual Sync**: `npm run sync-google-sheets` for resolving data discrepancies
+**データストレージ**:
+- **メインCSV**: timestamp,player_count形式
+- **日次平均CSV**: date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestampの拡張形式
+- 日次平均は0値を除外（API失敗）
+- **Google Sheets**: 別シート（PlayerData + DailyAverages）でCSV構造をミラー
+- **レート制限処理**: QueuedGoogleSheetsServiceがAPIクォータとリトライを管理
+- **手動同期**: データ不整合解決のための`npm run sync-google-sheets`
