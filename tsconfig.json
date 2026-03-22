@@ -1,8 +1,7 @@
 {
 	"extends": "@yuu1111/tsconfig/base.json",
 	"compilerOptions": {
-		"noEmit": true,
-		"types": ["node"]
+		"noEmit": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]
