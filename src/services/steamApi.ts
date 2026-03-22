@@ -1,5 +1,8 @@
 import axios from "axios";
-import type { SteamApiResponse } from "../types/config";
+import {
+	steamAppDetailsSchema,
+	steamPlayerCountResponseSchema,
+} from "../schemas/steam-api";
 
 export class SteamApiService {
 	private baseUrl = "https://api.steampowered.com";
@@ -9,25 +12,21 @@ export class SteamApiService {
 		const url = `${this.baseUrl}/ISteamUserStats/GetNumberOfCurrentPlayers/v1/`;
 
 		try {
-			const response = await axios.get<SteamApiResponse>(url, {
-				params: {
-					appid: appId,
-				},
+			const response = await axios.get(url, {
+				params: { appid: appId },
 				timeout: 10000,
 			});
 
-			if (response.data?.response?.player_count !== undefined) {
-				const playerCount = response.data.response.player_count;
+			const parsed = steamPlayerCountResponseSchema.parse(response.data);
+			const playerCount = parsed.response.player_count;
 
-				if (playerCount === 0) {
-					throw new Error(
-						"Steam API returned 0 players - treating as failed request",
-					);
-				}
-
-				return playerCount;
+			if (playerCount === 0) {
+				throw new Error(
+					"Steam API returned 0 players - treating as failed request",
+				);
 			}
-			throw new Error("Invalid response format from Steam API");
+
+			return playerCount;
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
 				if (error.response) {
@@ -49,16 +48,14 @@ export class SteamApiService {
 
 		try {
 			const response = await axios.get(url, {
-				params: {
-					appids: appId,
-					filters: "basic",
-				},
+				params: { appids: appId, filters: "basic" },
 				timeout: 10000,
 			});
 
 			const gameData = response.data?.[appId];
-			if (gameData?.success && gameData?.data?.name) {
-				return gameData.data.name;
+			const parsed = steamAppDetailsSchema.safeParse(gameData);
+			if (parsed.success) {
+				return parsed.data.data.name;
 			}
 
 			return null;

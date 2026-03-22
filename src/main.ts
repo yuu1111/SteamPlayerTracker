@@ -271,6 +271,7 @@ export class SteamPlayerTracker {
 		const shutdown = async (signal: string) => {
 			this.logger.info(`Received ${signal}. Shutting down gracefully...`);
 
+			this.queuedGoogleSheets?.dispose();
 			await this.removeCronJobs();
 
 			this.logger.info("Steam Player Tracker stopped");

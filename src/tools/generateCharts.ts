@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import { resolve } from "node:path";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import { format, subDays } from "date-fns";
+import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csv-parser";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger("generate-charts");
@@ -18,14 +19,12 @@ const defaultConfig: ChartConfig = {
 	backgroundColor: "white",
 };
 
-async function readCsvFile(filePath: string): Promise<string[][]> {
+async function readCsvContent(filePath: string): Promise<string | null> {
 	try {
-		const content = await fs.readFile(filePath, "utf8");
-		const lines = content.trim().split("\n");
-		return lines.map((line) => line.split(",").map((cell) => cell.trim()));
+		return await fs.readFile(filePath, "utf8");
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return [];
+			return null;
 		}
 		throw error;
 	}
@@ -38,30 +37,27 @@ async function generatePlayerCountChart(days: number = 7): Promise<void> {
 		import.meta.dirname,
 		"../../steam_concurrent_players.csv",
 	);
-	const csvData = await readCsvFile(csvPath);
-
-	if (csvData.length <= 1) {
+	const content = await readCsvContent(csvPath);
+	if (!content) {
 		logger.warn("No player data available for chart generation");
 		return;
 	}
 
+	const allRecords = parsePlayerDataCsv(content);
 	const cutoffDate = subDays(new Date(), days);
-	const filteredData = csvData.slice(1).filter((row) => {
-		const value = row[0];
-		if (!value) return false;
-		const timestamp = new Date(value);
-		return timestamp >= cutoffDate;
-	});
+	const filteredData = allRecords.filter(
+		(r) => new Date(r.timestamp) >= cutoffDate,
+	);
 
 	if (filteredData.length === 0) {
 		logger.warn(`No data available for the last ${days} days`);
 		return;
 	}
 
-	const labels = filteredData.map((row) =>
-		format(new Date(row[0] ?? ""), "MM/dd HH:mm"),
+	const labels = filteredData.map((r) =>
+		format(new Date(r.timestamp), "MM/dd HH:mm"),
 	);
-	const data = filteredData.map((row) => Number.parseInt(row[1] ?? "0", 10));
+	const data = filteredData.map((r) => r.playerCount);
 
 	const chartJSNodeCanvas = new ChartJSNodeCanvas({
 		width: defaultConfig.width,
@@ -100,17 +96,11 @@ async function generatePlayerCountChart(days: number = 7): Promise<void> {
 			scales: {
 				x: {
 					display: true,
-					title: {
-						display: true,
-						text: "Date/Time",
-					},
+					title: { display: true, text: "Date/Time" },
 				},
 				y: {
 					display: true,
-					title: {
-						display: true,
-						text: "Player Count",
-					},
+					title: { display: true, text: "Player Count" },
 					beginAtZero: false,
 				},
 			},
@@ -127,7 +117,6 @@ async function generatePlayerCountChart(days: number = 7): Promise<void> {
 		recursive: true,
 	});
 	await fs.writeFile(outputPath, imageBuffer);
-
 	logger.info(`Player count chart saved to ${outputPath}`);
 }
 
@@ -138,40 +127,31 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 		import.meta.dirname,
 		"../../steam_daily_averages.csv",
 	);
-	const csvData = await readCsvFile(csvPath);
-
-	if (csvData.length <= 1) {
+	const content = await readCsvContent(csvPath);
+	if (!content) {
 		logger.warn("No daily average data available for chart generation");
 		return;
 	}
 
+	const allRecords = parseDailyAverageCsv(content);
 	const cutoffDate = subDays(new Date(), days);
-	const filteredData = csvData.slice(1).filter((row) => {
-		const value = row[0];
-		if (!value) return false;
-		const date = new Date(value);
-		return date >= cutoffDate;
-	});
+	const filteredData = allRecords.filter((r) => new Date(r.date) >= cutoffDate);
 
 	if (filteredData.length === 0) {
 		logger.warn(`No daily average data available for the last ${days} days`);
 		return;
 	}
 
-	const headerRow = csvData[0];
-	const hasExtendedData = headerRow ? headerRow.length > 3 : false;
-
-	const labels = filteredData.map((row) =>
-		format(new Date(row[0] ?? ""), "MM/dd"),
-	);
-	const averageData = filteredData.map((row) =>
-		Number.parseInt(row[1] ?? "0", 10),
+	const labels = filteredData.map((r) => format(new Date(r.date), "MM/dd"));
+	const averageData = filteredData.map((r) => r.averagePlayerCount);
+	const hasExtendedData = filteredData.some(
+		(r) => r.maxPlayerCount !== undefined,
 	);
 	const maxData = hasExtendedData
-		? filteredData.map((row) => (row[3] ? Number.parseInt(row[3], 10) : null))
+		? filteredData.map((r) => r.maxPlayerCount ?? null)
 		: null;
 	const minData = hasExtendedData
-		? filteredData.map((row) => (row[5] ? Number.parseInt(row[5], 10) : null))
+		? filteredData.map((r) => r.minPlayerCount ?? null)
 		: null;
 
 	const datasets = [
@@ -213,10 +193,7 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 
 	const configuration = {
 		type: "line" as const,
-		data: {
-			labels,
-			datasets,
-		},
+		data: { labels, datasets },
 		options: {
 			responsive: false,
 			plugins: {
@@ -233,17 +210,11 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 			scales: {
 				x: {
 					display: true,
-					title: {
-						display: true,
-						text: "Date",
-					},
+					title: { display: true, text: "Date" },
 				},
 				y: {
 					display: true,
-					title: {
-						display: true,
-						text: "Player Count",
-					},
+					title: { display: true, text: "Player Count" },
 					beginAtZero: false,
 				},
 			},
@@ -260,7 +231,6 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 		recursive: true,
 	});
 	await fs.writeFile(outputPath, imageBuffer);
-
 	logger.info(`Daily average chart saved to ${outputPath}`);
 }
 

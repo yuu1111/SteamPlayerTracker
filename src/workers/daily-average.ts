@@ -5,22 +5,20 @@ import { createLogger } from "../utils/logger";
 import { RetryHandler } from "../utils/retry";
 
 const logger = createLogger("daily-average");
+const retryHandler = new RetryHandler(
+	config.retry.maxRetries,
+	config.retry.baseDelay,
+);
+const dailyAverageService = new DailyAverageService(
+	config.output.csvFilePath,
+	config.output.dailyAverageCsvFilePath,
+	logger,
+);
 
 async function calculateDailyAverage(): Promise<void> {
 	if (!config.output.dailyAverageCsvEnabled) {
 		return;
 	}
-
-	const retryHandler = new RetryHandler(
-		config.retry.maxRetries,
-		config.retry.baseDelay,
-	);
-
-	const dailyAverageService = new DailyAverageService(
-		config.output.csvFilePath,
-		config.output.dailyAverageCsvFilePath,
-		logger,
-	);
 
 	try {
 		logger.info("Starting daily average calculation...");

@@ -34,9 +34,9 @@
 1. **全ての開発作業を完了**し、全てのコミットがプッシュされていることを確認
 2. **自動リリースコマンドを実行**:
    ```bash
-   npm run release          # パッチリリース（1.0.0 → 1.0.1）
-   npm run release:minor    # マイナーリリース（1.0.0 → 1.1.0）
-   npm run release:major    # メジャーリリース（1.0.0 → 2.0.0）
+   bun run release          # パッチリリース（1.0.0 → 1.0.1）
+   bun run release:minor    # マイナーリリース（1.0.0 → 1.1.0）
+   bun run release:major    # メジャーリリース（1.0.0 → 2.0.0）
    ```
    これにより自動的に：
    - 依存関係をクリーンアップして再ビルド
@@ -65,38 +65,31 @@
 
 ```bash
 # ビルドと実行
-npm run build              # TypeScriptをdist/にコンパイル
-npm start                  # コンパイル済みアプリケーションを実行
-npm run dev                # ts-nodeで開発モード実行
+bun run build              # Bun.build()でdist/にバンドル
+bun start                  # コンパイル済みアプリケーションを実行
+bun run dev                # bun --watchで開発モード実行
 
 # 開発ツール
-npm run watch              # ウォッチモードコンパイル
-npm run clean              # distディレクトリをクリーン
-npm run lint               # ESLint静的解析
-npm run typecheck          # TypeScript型チェック
-npm run setup              # 依存関係インストールとビルド
+bun run lint               # Biome静的解析
+bun run format             # Biomeフォーマット(自動修正)
+bun run typecheck          # TypeScript型チェック
+bun run setup              # 依存関係インストールとビルド
+bun run kill               # dev-cleanでプロセスクリーンアップ
 
 # データ管理ツール
-npm run calculate-daily-averages  # 手動日次平均計算ツール
-npm run sync-google-sheets        # 手動CSV-Google Sheets同期
+bun run calculate-daily-averages  # 手動日次平均計算ツール
+bun run sync-google-sheets        # 手動CSV-Google Sheets同期
+bun run generate-charts           # チャート画像生成
 
 # リリース管理
-npm run release            # パッチリリース（1.0.0 → 1.0.1）
-npm run release:minor      # マイナーリリース（1.0.0 → 1.1.0）
-npm run release:major      # メジャーリリース（1.0.0 → 2.0.0）
-npm run prerelease         # リリース前テスト実行
-npm run test:ci            # CIテストスイート（型チェック + リント）
-npm run prepare-release    # 完全なリリース準備
-
-# プラットフォーム固有スクリプト
-# Windows: build.bat, start.bat, setup.bat, sync-google-sheets.bat
-# Windows (PowerShell): build.ps1, start.ps1, setup.ps1, sync-google-sheets.ps1
-# Linux/macOS: build.sh, start.sh, setup.sh, sync-google-sheets.sh
+bun run release            # パッチリリース(1.0.0 → 1.0.1)
+bun run release:minor      # マイナーリリース(1.0.0 → 1.1.0)
+bun run release:major      # メジャーリリース(1.0.0 → 2.0.0)
 ```
 
 ## アーキテクチャ概要
 
-**メインクラス**: `SteamPlayerTracker` (src/steamPlayerTracker.ts) - 全サービスを統制する中央コーディネーター
+**メインクラス**: `SteamPlayerTracker` (src/main.ts) - 全サービスを統制する中央コーディネーター
 
 **サービス指向設計**:
 - `SteamApiService`: Steam Web APIから現在のプレイヤー数を取得
@@ -104,15 +97,24 @@ npm run prepare-release    # 完全なリリース準備
 - `GoogleSheetsService`: クラウドストレージのための直接Google Sheets統合
 - `QueuedGoogleSheetsService`: リトライキュー付きレート制限対応Google Sheetsサービス
 - `DailyAverageService`: 最大/最小追跡付き日次プレイヤー数平均を計算・管理
-- `Scheduler`: cronベースのデータ収集と日次計算を管理
 - `RetryHandler`: 指数関数的バックオフリトライロジックを実装
-- `Logger`: ファイルローテーション付きWinstonベースログ
+- `Logger`: セッションファイルトランスポート付きWinstonベースログ
 
-**データフロー**: Steam API → データ収集 → 並列ストレージ（キュー付きCSV + Google Sheets） → 拡張日次平均計算（平均/最大/最小とタイムスタンプ）
+**Cronワーカー** (Bun.cron() API):
+- `collect-data`: データ収集のcronワーカー
+- `daily-average`: 日次平均計算のcronワーカー
+
+**スキーマバリデーション** (Zod):
+- `src/schemas/config.ts`: 設定の判別共用体バリデーション
+- `src/schemas/csv.ts`: CSVデータ行のスキーマ
+- `src/schemas/steam-api.ts`: Steam APIレスポンスのスキーマ
+- `src/schemas/google-credentials.ts`: Googleサービスアカウント認証情報のスキーマ
+
+**データフロー**: Steam API → データ収集 → 並列ストレージ(キュー付きCSV + Google Sheets) → 拡張日次平均計算(平均/最大/最小とタイムスタンプ)
 
 ## 設定システム
 
-設定は`src/config/config.ts`でバリデーション付きdotenvを使用した環境ベースです：
+設定は`src/schemas/config.ts`でZodスキーマによるバリデーション付き環境ベースです(dotenv経由)：
 
 **必須**: `.env.example`を`.env`にコピーして設定：
 - `STEAM_APP_ID`: 追跡するSteamゲームApp ID
@@ -154,20 +156,25 @@ npm run prepare-release    # 完全なリリース準備
 5. 継続的収集と日次計算のスケジュール
 
 **ファイル構造**:
-- `src/index.ts`: アプリケーションエントリーポイント
-- `src/config/`: 設定管理とバリデーション
+- `src/main.ts`: アプリケーションエントリーポイント(SteamPlayerTrackerクラス)
+- `src/config/`: 設定エクスポート(`schemas/config`からパース)
+- `src/schemas/`: Zodスキーマ定義(設定、CSV、Steam API、Google認証情報)
 - `src/services/`: 全ビジネスロジックサービス
   - `steamApi.ts`: Steam Web API統合
   - `csvWriter.ts`: CSVファイル操作
   - `googleSheets.ts`: 直接Google Sheets統合
   - `queuedGoogleSheets.ts`: リトライキュー付きレート制限対応Google Sheets
   - `dailyAverageService.ts`: 最大/最小追跡付き日次統計計算
-  - `scheduler.ts`: cronベーススケジューリングシステム
+- `src/workers/`: Bun.cron()ベースのcronワーカー
+  - `collect-data.ts`: データ収集ワーカー
+  - `daily-average.ts`: 日次平均計算ワーカー
 - `src/tools/`: コマンドラインユーティリティ
   - `calculateAllDailyAverages.ts`: 手動日次平均計算
   - `syncGoogleSheets.ts`: CSV-Google Sheets同期ツール
-- `src/types/`: TypeScript型定義
-- `src/utils/`: 共有ユーティリティ（ログ、リトライロジック）
+  - `generateCharts.ts`: チャート画像生成ツール
+- `src/types/`: TypeScript型定義(`schemas/`からの再エクスポート)
+- `src/utils/`: 共有ユーティリティ(ログ、リトライ、セッションファイルトランスポート)
+- `scripts/`: ビルド・リリーススクリプト(TypeScript/Bun実行)
 
 **データストレージ**:
 - **メインCSV**: timestamp,player_count形式
@@ -175,4 +182,4 @@ npm run prepare-release    # 完全なリリース準備
 - 日次平均は0値を除外（API失敗）
 - **Google Sheets**: 別シート（PlayerData + DailyAverages）でCSV構造をミラー
 - **レート制限処理**: QueuedGoogleSheetsServiceがAPIクォータとリトライを管理
-- **手動同期**: データ不整合解決のための`npm run sync-google-sheets`
+- **手動同期**: データ不整合解決のための`bun run sync-google-sheets`

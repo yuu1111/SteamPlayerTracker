@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import { JWT } from "google-auth-library";
 import type { sheets_v4 } from "googleapis";
 import { google } from "googleapis";
+import { googleServiceAccountSchema } from "../schemas/google-credentials";
 import type { PlayerDataRecord } from "../types/config";
 
 export interface DailyAverageSheetRecord {
@@ -20,6 +21,8 @@ export class GoogleSheetsService {
 	private sheetName: string;
 	private lastRequestTime: number = 0;
 	private readonly minRequestInterval: number = 100;
+	private headerVerified: boolean = false;
+	private dailyAverageHeaderVerified: boolean = false;
 
 	constructor(
 		spreadsheetId: string,
@@ -34,7 +37,7 @@ export class GoogleSheetsService {
 	private async initializeAuth(serviceAccountKeyPath: string): Promise<void> {
 		try {
 			const keyFile = await fs.readFile(serviceAccountKeyPath, "utf8");
-			const credentials = JSON.parse(keyFile);
+			const credentials = googleServiceAccountSchema.parse(JSON.parse(keyFile));
 
 			const auth = new JWT({
 				email: credentials.client_email,
@@ -104,10 +107,10 @@ export class GoogleSheetsService {
 				record.timestamp,
 				record.playerCount,
 				record.sampleCount,
-				record.maxPlayerCount || "",
-				record.maxPlayerTimestamp || "",
-				record.minPlayerCount || "",
-				record.minPlayerTimestamp || "",
+				record.maxPlayerCount ?? "",
+				record.maxPlayerTimestamp ?? "",
+				record.minPlayerCount ?? "",
+				record.minPlayerTimestamp ?? "",
 			]);
 
 			await this.rateLimitedRequest(() =>
@@ -189,10 +192,10 @@ export class GoogleSheetsService {
 					record.timestamp,
 					record.playerCount,
 					record.sampleCount,
-					record.maxPlayerCount || "",
-					record.maxPlayerTimestamp || "",
-					record.minPlayerCount || "",
-					record.minPlayerTimestamp || "",
+					record.maxPlayerCount ?? "",
+					record.maxPlayerTimestamp ?? "",
+					record.minPlayerCount ?? "",
+					record.minPlayerTimestamp ?? "",
 				]),
 			];
 
@@ -348,6 +351,7 @@ export class GoogleSheetsService {
 	}
 
 	private async ensureHeaderExists(): Promise<void> {
+		if (this.headerVerified) return;
 		try {
 			const response = await this.sheets.spreadsheets.values.get({
 				spreadsheetId: this.spreadsheetId,
@@ -370,6 +374,7 @@ export class GoogleSheetsService {
 					},
 				});
 			}
+			this.headerVerified = true;
 		} catch (error) {
 			if (
 				error instanceof Error &&
@@ -398,10 +403,10 @@ export class GoogleSheetsService {
 					record.timestamp,
 					record.playerCount,
 					record.sampleCount,
-					record.maxPlayerCount || "",
-					record.maxPlayerTimestamp || "",
-					record.minPlayerCount || "",
-					record.minPlayerTimestamp || "",
+					record.maxPlayerCount ?? "",
+					record.maxPlayerTimestamp ?? "",
+					record.minPlayerCount ?? "",
+					record.minPlayerTimestamp ?? "",
 				],
 			];
 
@@ -470,6 +475,7 @@ export class GoogleSheetsService {
 	}
 
 	private async ensureDailyAverageHeaderExists(): Promise<void> {
+		if (this.dailyAverageHeaderVerified) return;
 		try {
 			const response = await this.sheets.spreadsheets.values.get({
 				spreadsheetId: this.spreadsheetId,
@@ -502,6 +508,7 @@ export class GoogleSheetsService {
 					},
 				});
 			}
+			this.dailyAverageHeaderVerified = true;
 		} catch (error) {
 			if (
 				error instanceof Error &&

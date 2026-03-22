@@ -82,16 +82,6 @@ export class CsvWriter {
 
 	private async ensureDirectoryExists(): Promise<void> {
 		const dir = dirname(this.filePath);
-		try {
-			await fs.mkdir(dir, { recursive: true });
-		} catch (error) {
-			if (
-				error instanceof Error &&
-				"code" in error &&
-				error.code !== "EEXIST"
-			) {
-				throw error;
-			}
-		}
+		await fs.mkdir(dir, { recursive: true });
 	}
 }

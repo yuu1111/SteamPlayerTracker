@@ -17,6 +17,7 @@ export class QueuedGoogleSheetsService {
 	private dailyAverageSheets: GoogleSheetsService | undefined;
 	private queue: QueuedRecord[] = [];
 	private isProcessing: boolean = false;
+	private intervalId: ReturnType<typeof setInterval> | null = null;
 	private logger: ReturnType<typeof createLogger>;
 	private maxRetries: number = 3;
 	private retryInterval: number = 30000;
@@ -82,7 +83,7 @@ export class QueuedGoogleSheetsService {
 	}
 
 	private startQueueProcessor(): void {
-		setInterval(async () => {
+		this.intervalId = setInterval(async () => {
 			if (this.isProcessing || this.queue.length === 0) {
 				return;
 			}
@@ -150,6 +151,13 @@ export class QueuedGoogleSheetsService {
 			this.logger.info(
 				`Processed ${processed.length} records from queue. ${this.queue.length} records remaining.`,
 			);
+		}
+	}
+
+	dispose(): void {
+		if (this.intervalId) {
+			clearInterval(this.intervalId);
+			this.intervalId = null;
 		}
 	}
 

@@ -1,3 +1,7 @@
+import { createLogger } from "./logger";
+
+const logger = createLogger("retry");
+
 export class RetryHandler {
 	private maxRetries: number;
 	private baseDelay: number;
@@ -26,7 +30,7 @@ export class RetryHandler {
 				}
 
 				const delay = this.calculateDelay(attempt);
-				console.warn(
+				logger.warn(
 					`${operationName} attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay}ms...`,
 				);
 

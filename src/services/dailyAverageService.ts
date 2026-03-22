@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import type { PlayerDataRecord } from "../types/config";
+import { parsePlayerDataCsv } from "../utils/csv-parser";
 import type { createLogger } from "../utils/logger";
 import { CsvWriter } from "./csvWriter";
 import type { QueuedGoogleSheetsService } from "./queuedGoogleSheets";
@@ -34,12 +35,15 @@ export class DailyAverageService {
 		this.logger = logger;
 	}
 
-	async calculateAndSaveDailyAverage(date: Date): Promise<void> {
+	async calculateAndSaveDailyAverage(
+		date: Date,
+		preloadedData?: PlayerDataRecord[],
+	): Promise<void> {
 		try {
 			const dateStr = date.toISOString().split("T")[0] ?? "";
 			this.logger.info(`Calculating daily average for ${dateStr}`);
 
-			const dailyData = await this.readDailyData(dateStr);
+			const dailyData = preloadedData ?? (await this.readDailyData(dateStr));
 
 			if (dailyData.length === 0) {
 				this.logger.warn(`No data found for ${dateStr}`);
@@ -105,48 +109,38 @@ export class DailyAverageService {
 		}
 	}
 
-	private async readDailyData(dateStr: string): Promise<PlayerDataRecord[]> {
+	private async readAllRecords(): Promise<PlayerDataRecord[]> {
 		try {
 			const csvContent = await fs.readFile(this.sourceCsvPath, "utf8");
-			const lines = csvContent.trim().split("\n");
-
-			if (lines.length <= 1) {
-				return [];
-			}
-
-			const records: PlayerDataRecord[] = [];
-
-			for (let i = 1; i < lines.length; i++) {
-				const line = lines[i];
-				if (!line) continue;
-
-				const parts = line.split(",");
-				const timestamp = parts[0];
-				const playerCountStr = parts[1];
-
-				if (timestamp?.startsWith(dateStr)) {
-					const playerCount = Number.parseInt(playerCountStr ?? "", 10);
-					if (!Number.isNaN(playerCount)) {
-						records.push({
-							timestamp: timestamp.trim(),
-							playerCount,
-						});
-					}
-				}
-			}
-
-			return records;
+			return parsePlayerDataCsv(csvContent);
 		} catch (error) {
-			if (
-				error &&
-				typeof error === "object" &&
-				"code" in error &&
-				(error as { code: string }).code === "ENOENT"
-			) {
+			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
 				return [];
 			}
 			throw error;
 		}
+	}
+
+	private groupByDate(
+		records: PlayerDataRecord[],
+	): Map<string, PlayerDataRecord[]> {
+		const groups = new Map<string, PlayerDataRecord[]>();
+		for (const record of records) {
+			const date = record.timestamp.split(" ")[0];
+			if (!date) continue;
+			const group = groups.get(date);
+			if (group) {
+				group.push(record);
+			} else {
+				groups.set(date, [record]);
+			}
+		}
+		return groups;
+	}
+
+	private async readDailyData(dateStr: string): Promise<PlayerDataRecord[]> {
+		const allRecords = await this.readAllRecords();
+		return allRecords.filter((r) => r.timestamp.startsWith(dateStr));
 	}
 
 	private async saveAverageRecord(record: DailyAverageRecord): Promise<void> {
@@ -186,36 +180,21 @@ export class DailyAverageService {
 		try {
 			this.logger.info("Updating all daily averages...");
 
-			const csvContent = await fs.readFile(this.sourceCsvPath, "utf8");
-			const lines = csvContent.trim().split("\n");
+			const allRecords = await this.readAllRecords();
 
-			if (lines.length <= 1) {
+			if (allRecords.length === 0) {
 				this.logger.warn("No data to process");
 				return;
 			}
 
-			const dates = new Set<string>();
+			const grouped = this.groupByDate(allRecords);
 
-			for (let i = 1; i < lines.length; i++) {
-				const line = lines[i];
-				if (!line) continue;
-
-				const parts = line.split(",");
-				const timestamp = parts[0];
-				if (timestamp) {
-					const date = timestamp.split(" ")[0];
-					if (date) {
-						dates.add(date);
-					}
-				}
-			}
-
-			for (const dateStr of dates) {
+			for (const [dateStr, records] of grouped) {
 				const date = new Date(dateStr);
-				await this.calculateAndSaveDailyAverage(date);
+				await this.calculateAndSaveDailyAverage(date, records);
 			}
 
-			this.logger.info(`Updated daily averages for ${dates.size} days`);
+			this.logger.info(`Updated daily averages for ${grouped.size} days`);
 		} catch (error) {
 			this.logger.error(
 				`Failed to update all daily averages: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -228,30 +207,15 @@ export class DailyAverageService {
 		try {
 			this.logger.info("Checking for missing daily averages...");
 
-			const sourceContent = await fs.readFile(this.sourceCsvPath, "utf8");
-			const sourceLines = sourceContent.trim().split("\n");
+			const allRecords = await this.readAllRecords();
 
-			if (sourceLines.length <= 1) {
+			if (allRecords.length === 0) {
 				this.logger.info("No source data to process");
 				return;
 			}
 
-			const sourceDates = new Set<string>();
+			const grouped = this.groupByDate(allRecords);
 			const today = new Date().toISOString().split("T")[0] ?? "";
-
-			for (let i = 1; i < sourceLines.length; i++) {
-				const line = sourceLines[i];
-				if (!line) continue;
-
-				const parts = line.split(",");
-				const timestamp = parts[0];
-				if (timestamp) {
-					const date = timestamp.split(" ")[0];
-					if (date && date < today) {
-						sourceDates.add(date);
-					}
-				}
-			}
 
 			const existingAverages = new Set<string>();
 			try {
@@ -259,31 +223,18 @@ export class DailyAverageService {
 					this.dailyAverageCsvPath,
 					"utf8",
 				);
-				const averageLines = averageContent.trim().split("\n");
-
-				for (let i = 1; i < averageLines.length; i++) {
-					const line = averageLines[i];
-					if (!line) continue;
-
-					const parts = line.split(",");
-					const date = parts[0];
-					if (date) {
-						existingAverages.add(date.trim());
-					}
+				const avgRecords = parsePlayerDataCsv(averageContent);
+				for (const record of avgRecords) {
+					existingAverages.add(record.timestamp.trim());
 				}
 			} catch (error) {
-				if (
-					error &&
-					typeof error === "object" &&
-					"code" in error &&
-					(error as { code: string }).code !== "ENOENT"
-				) {
+				if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
 					throw error;
 				}
 			}
 
-			const missingDates = Array.from(sourceDates)
-				.filter((date) => !existingAverages.has(date))
+			const missingDates = Array.from(grouped.keys())
+				.filter((date) => date < today && !existingAverages.has(date))
 				.sort();
 
 			if (missingDates.length === 0) {
@@ -295,7 +246,7 @@ export class DailyAverageService {
 
 			for (const dateStr of missingDates) {
 				const date = new Date(dateStr);
-				await this.calculateAndSaveDailyAverage(date);
+				await this.calculateAndSaveDailyAverage(date, grouped.get(dateStr));
 			}
 
 			this.logger.info(

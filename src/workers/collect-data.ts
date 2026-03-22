@@ -8,15 +8,21 @@ import { createLogger } from "../utils/logger";
 import { RetryHandler } from "../utils/retry";
 
 const logger = createLogger("collect-data");
+const steamApi = new SteamApiService();
+const csvWriter = new CsvWriter(config.output.csvFilePath);
+const retryHandler = new RetryHandler(
+	config.retry.maxRetries,
+	config.retry.baseDelay,
+);
+const googleSheets = config.googleSheets.enabled
+	? new GoogleSheetsService(
+			config.googleSheets.spreadsheetId,
+			config.googleSheets.sheetName,
+			config.googleSheets.serviceAccountKeyPath,
+		)
+	: null;
 
 async function collectAndSaveData(): Promise<void> {
-	const steamApi = new SteamApiService();
-	const csvWriter = new CsvWriter(config.output.csvFilePath);
-	const retryHandler = new RetryHandler(
-		config.retry.maxRetries,
-		config.retry.baseDelay,
-	);
-
 	try {
 		logger.info("Starting data collection...");
 
@@ -41,13 +47,7 @@ async function collectAndSaveData(): Promise<void> {
 			);
 		}
 
-		if (config.googleSheets.enabled) {
-			const gs = config.googleSheets;
-			const googleSheets = new GoogleSheetsService(
-				gs.spreadsheetId,
-				gs.sheetName,
-				gs.serviceAccountKeyPath,
-			);
+		if (googleSheets) {
 			savePromises.push(googleSheets.appendRecord(record));
 		}
 
