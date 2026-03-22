@@ -16,9 +16,9 @@
 		"generate-charts": "bun dist/tools/generateCharts.js",
 		"kill": "dev-clean --yes",
 		"setup": "bun install && bun run build",
-		"release": "node scripts/release.cjs",
-		"release:minor": "node scripts/release.cjs minor",
-		"release:major": "node scripts/release.cjs major",
+		"release": "bun scripts/release.ts",
+		"release:minor": "bun scripts/release.ts minor",
+		"release:major": "bun scripts/release.ts major",
 		"prerelease": "bun run test:ci",
 		"test:ci": "bun run typecheck && bun run lint",
 		"prepare-release": "bun run clean && bun run build && bun run test:ci"

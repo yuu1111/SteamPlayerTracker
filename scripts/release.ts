@@ -1,27 +1,28 @@
-#!/usr/bin/env node
+import { execSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-const { execSync } = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
+const packageJsonPath = join(import.meta.dirname, "..", "package.json");
 
-const packageJsonPath = path.join(__dirname, "..", "package.json");
-
-function runCommand(command, description) {
+function runCommand(command: string, description: string) {
 	console.log(`\n${description}...`);
 	try {
 		execSync(command, { stdio: "inherit", timeout: 60000 });
 		console.log(`${description} completed`);
 	} catch (error) {
-		console.error(`${description} failed:`, error.message);
+		console.error(
+			`${description} failed:`,
+			error instanceof Error ? error.message : String(error),
+		);
 		process.exit(1);
 	}
 }
 
-function updateVersion(type = "patch") {
+function updateVersion(type = "patch"): string {
 	console.log(`\nUpdating version (${type})...`);
 
-	const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-	const currentVersion = packageJson.version;
+	const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+	const currentVersion: string = packageJson.version;
 	const versionParts = currentVersion.split(".").map(Number);
 
 	switch (type) {
@@ -42,7 +43,7 @@ function updateVersion(type = "patch") {
 	const newVersion = versionParts.join(".");
 	packageJson.version = newVersion;
 
-	fs.writeFileSync(
+	writeFileSync(
 		packageJsonPath,
 		`${JSON.stringify(packageJson, null, "\t")}\n`,
 	);
@@ -59,7 +60,9 @@ function main() {
 	console.log("Starting release process...");
 
 	try {
-		const gitStatus = execSync("git status --porcelain", { encoding: "utf8" });
+		const gitStatus = execSync("git status --porcelain", {
+			encoding: "utf8",
+		});
 		if (gitStatus.trim()) {
 			console.warn("Uncommitted changes detected:");
 			console.log(gitStatus);
@@ -67,12 +70,14 @@ function main() {
 			process.exit(1);
 		}
 	} catch (error) {
-		console.error("Git status check failed:", error.message);
+		console.error(
+			"Git status check failed:",
+			error instanceof Error ? error.message : String(error),
+		);
 		process.exit(1);
 	}
 
 	runCommand("bun install", "Installing dependencies");
-
 	runCommand("bun run typecheck", "TypeScript type check");
 
 	if (!skipTests) {
@@ -84,7 +89,7 @@ function main() {
 	}
 
 	runCommand("bun run clean", "Cleaning dist directory");
-	runCommand("bun run build", "TypeScript compilation");
+	runCommand("bun run build", "Building");
 
 	const newVersion = updateVersion(versionType);
 
@@ -93,7 +98,6 @@ function main() {
 		`git commit -m "chore(release): v${newVersion}"`,
 		"Creating release commit",
 	);
-
 	runCommand(
 		`git tag -a v${newVersion} -m "Release v${newVersion}"`,
 		"Creating git tag",
