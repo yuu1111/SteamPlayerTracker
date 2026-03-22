@@ -1,7 +1,10 @@
 import { promises as fs } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "../config/config";
-import { GoogleSheetsService } from "../services/googleSheets";
+import {
+	createGoogleSheetsService,
+	type GoogleSheetsService,
+} from "../services/googleSheets";
 import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csv-parser";
 import { createLogger } from "../utils/logger";
 
@@ -95,13 +98,13 @@ async function main(): Promise<void> {
 
 		logger.info("Starting Google Sheets sync...");
 
-		const playerDataSheets = new GoogleSheetsService(
+		const playerDataSheets = createGoogleSheetsService(
 			config.googleSheets.spreadsheetId,
 			config.googleSheets.sheetName,
 			config.googleSheets.serviceAccountKeyPath,
 		);
 
-		const dailyAverageSheets = new GoogleSheetsService(
+		const dailyAverageSheets = createGoogleSheetsService(
 			config.googleSheets.spreadsheetId,
 			config.googleSheets.dailyAverageSheetName,
 			config.googleSheets.serviceAccountKeyPath,

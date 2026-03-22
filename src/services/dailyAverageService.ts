@@ -2,9 +2,19 @@ import { promises as fs } from "node:fs";
 import type { PlayerDataRecord } from "../types/config";
 import { parsePlayerDataCsv } from "../utils/csv-parser";
 import type { createLogger } from "../utils/logger";
-import { CsvWriter } from "./csvWriter";
+import { createCsvWriter } from "./csvWriter";
 import type { QueuedGoogleSheetsService } from "./queuedGoogleSheets";
 
+/**
+ * @description 日次平均レコードの型
+ * @property date - 日付文字列
+ * @property averagePlayerCount - 平均プレイヤー数
+ * @property sampleCount - サンプル数
+ * @property maxPlayerCount - 最大プレイヤー数
+ * @property maxPlayerTimestamp - 最大プレイヤー数の時刻
+ * @property minPlayerCount - 最小プレイヤー数
+ * @property minPlayerTimestamp - 最小プレイヤー数の時刻
+ */
 export interface DailyAverageRecord {
 	date: string;
 	averagePlayerCount: number;
@@ -15,45 +25,141 @@ export interface DailyAverageRecord {
 	minPlayerTimestamp: string;
 }
 
-export class DailyAverageService {
-	private csvWriter: CsvWriter;
-	private dailyAverageCsvPath: string;
-	private queuedGoogleSheets: QueuedGoogleSheetsService | undefined;
-	private logger: ReturnType<typeof createLogger>;
-	private sourceCsvPath: string;
+/**
+ * @description 日次平均サービスの公開インターフェース
+ */
+export interface DailyAverageService {
+	calculateAndSaveDailyAverage(
+		date: Date,
+		preloadedData?: PlayerDataRecord[],
+	): Promise<void>;
+	updateAllDailyAverages(): Promise<void>;
+	checkAndCalculateMissingAverages(): Promise<void>;
+}
 
-	constructor(
-		sourceCsvPath: string,
-		dailyAverageCsvPath: string,
-		logger: ReturnType<typeof createLogger>,
-		queuedGoogleSheets?: QueuedGoogleSheetsService,
-	) {
-		this.sourceCsvPath = sourceCsvPath;
-		this.dailyAverageCsvPath = dailyAverageCsvPath;
-		this.csvWriter = new CsvWriter(dailyAverageCsvPath);
-		this.queuedGoogleSheets = queuedGoogleSheets;
-		this.logger = logger;
+/**
+ * @description 日次平均計算サービスを生成
+ * @param sourceCsvPath - ソースCSVファイルパス
+ * @param dailyAverageCsvPath - 日次平均CSVファイルパス
+ * @param logger - ロガー
+ * @param queuedGoogleSheets - キュー付きGoogle Sheetsサービス
+ * @returns 日次平均計算関数を持つオブジェクト
+ */
+export function createDailyAverageService(
+	sourceCsvPath: string,
+	dailyAverageCsvPath: string,
+	logger: ReturnType<typeof createLogger>,
+	queuedGoogleSheets?: QueuedGoogleSheetsService,
+): DailyAverageService {
+	const csvWriter = createCsvWriter(dailyAverageCsvPath);
+
+	/**
+	 * @description ソースCSVから全レコードを読み込み
+	 * @returns プレイヤーデータレコードの配列
+	 */
+	async function readAllRecords(): Promise<PlayerDataRecord[]> {
+		try {
+			const csvContent = await fs.readFile(sourceCsvPath, "utf8");
+			return parsePlayerDataCsv(csvContent);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+				return [];
+			}
+			throw error;
+		}
 	}
 
-	async calculateAndSaveDailyAverage(
+	/**
+	 * @description レコードを日付ごとにグループ化
+	 * @param records - プレイヤーデータレコードの配列
+	 * @returns 日付をキーとするレコードのMap
+	 */
+	function groupByDate(
+		records: PlayerDataRecord[],
+	): Map<string, PlayerDataRecord[]> {
+		const groups = new Map<string, PlayerDataRecord[]>();
+		for (const record of records) {
+			const date = record.timestamp.split(" ")[0];
+			if (!date) continue;
+			const group = groups.get(date);
+			if (group) {
+				group.push(record);
+			} else {
+				groups.set(date, [record]);
+			}
+		}
+		return groups;
+	}
+
+	/**
+	 * @description 指定日のレコードを読み込み
+	 * @param dateStr - 日付文字列
+	 * @returns 該当日のプレイヤーデータレコード
+	 */
+	async function readDailyData(dateStr: string): Promise<PlayerDataRecord[]> {
+		const allRecords = await readAllRecords();
+		return allRecords.filter((r) => r.timestamp.startsWith(dateStr));
+	}
+
+	/**
+	 * @description 平均レコードをCSVとGoogle Sheetsに保存
+	 * @param record - 日次平均レコード
+	 */
+	async function saveAverageRecord(record: DailyAverageRecord): Promise<void> {
+		const savePromises: Promise<void>[] = [];
+
+		savePromises.push(
+			csvWriter.writeDailyAverageRecord(
+				record.date,
+				record.averagePlayerCount,
+				record.sampleCount,
+				record.maxPlayerCount,
+				record.maxPlayerTimestamp,
+				record.minPlayerCount,
+				record.minPlayerTimestamp,
+			),
+		);
+
+		if (queuedGoogleSheets) {
+			const sheetsRecord = {
+				timestamp: record.date,
+				playerCount: record.averagePlayerCount,
+				sampleCount: record.sampleCount,
+				maxPlayerCount: record.maxPlayerCount,
+				maxPlayerTimestamp: record.maxPlayerTimestamp,
+				minPlayerCount: record.minPlayerCount,
+				minPlayerTimestamp: record.minPlayerTimestamp,
+			};
+			savePromises.push(queuedGoogleSheets.addDailyAverageRecord(sheetsRecord));
+		}
+
+		await Promise.all(savePromises);
+	}
+
+	/**
+	 * @description 指定日の日次平均を計算して保存
+	 * @param date - 対象日
+	 * @param preloadedData - 事前読み込み済みデータ
+	 */
+	async function calculateAndSaveDailyAverage(
 		date: Date,
 		preloadedData?: PlayerDataRecord[],
 	): Promise<void> {
 		try {
 			const dateStr = date.toISOString().split("T")[0] ?? "";
-			this.logger.info(`Calculating daily average for ${dateStr}`);
+			logger.info(`Calculating daily average for ${dateStr}`);
 
-			const dailyData = preloadedData ?? (await this.readDailyData(dateStr));
+			const dailyData = preloadedData ?? (await readDailyData(dateStr));
 
 			if (dailyData.length === 0) {
-				this.logger.warn(`No data found for ${dateStr}`);
+				logger.warn(`No data found for ${dateStr}`);
 				return;
 			}
 
 			const validData = dailyData.filter((record) => record.playerCount > 0);
 
 			if (validData.length === 0) {
-				this.logger.warn(`No valid data (non-zero) found for ${dateStr}`);
+				logger.warn(`No valid data (non-zero) found for ${dateStr}`);
 				return;
 			}
 
@@ -67,7 +173,7 @@ export class DailyAverageService {
 			let minRecord = validData[0];
 
 			if (!maxRecord || !minRecord) {
-				this.logger.warn(`No valid records found for ${dateStr}`);
+				logger.warn(`No valid records found for ${dateStr}`);
 				return;
 			}
 
@@ -90,9 +196,9 @@ export class DailyAverageService {
 				minPlayerTimestamp: minRecord.timestamp,
 			};
 
-			await this.saveAverageRecord(averageRecord);
+			await saveAverageRecord(averageRecord);
 
-			this.logger.info(`Daily average calculated successfully for ${dateStr}`, {
+			logger.info(`Daily average calculated successfully for ${dateStr}`, {
 				average,
 				sampleCount: validData.length,
 				excludedZeros: dailyData.length - validData.length,
@@ -102,127 +208,63 @@ export class DailyAverageService {
 				minTime: averageRecord.minPlayerTimestamp,
 			});
 		} catch (error) {
-			this.logger.error(
+			logger.error(
 				`Failed to calculate daily average: ${error instanceof Error ? error.message : "Unknown error"}`,
 			);
 			throw error;
 		}
 	}
 
-	private async readAllRecords(): Promise<PlayerDataRecord[]> {
+	/**
+	 * @description 全日次平均を再計算
+	 */
+	async function updateAllDailyAverages(): Promise<void> {
 		try {
-			const csvContent = await fs.readFile(this.sourceCsvPath, "utf8");
-			return parsePlayerDataCsv(csvContent);
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
-				return [];
-			}
-			throw error;
-		}
-	}
+			logger.info("Updating all daily averages...");
 
-	private groupByDate(
-		records: PlayerDataRecord[],
-	): Map<string, PlayerDataRecord[]> {
-		const groups = new Map<string, PlayerDataRecord[]>();
-		for (const record of records) {
-			const date = record.timestamp.split(" ")[0];
-			if (!date) continue;
-			const group = groups.get(date);
-			if (group) {
-				group.push(record);
-			} else {
-				groups.set(date, [record]);
-			}
-		}
-		return groups;
-	}
-
-	private async readDailyData(dateStr: string): Promise<PlayerDataRecord[]> {
-		const allRecords = await this.readAllRecords();
-		return allRecords.filter((r) => r.timestamp.startsWith(dateStr));
-	}
-
-	private async saveAverageRecord(record: DailyAverageRecord): Promise<void> {
-		const savePromises: Promise<void>[] = [];
-
-		savePromises.push(
-			this.csvWriter.writeDailyAverageRecord(
-				record.date,
-				record.averagePlayerCount,
-				record.sampleCount,
-				record.maxPlayerCount,
-				record.maxPlayerTimestamp,
-				record.minPlayerCount,
-				record.minPlayerTimestamp,
-			),
-		);
-
-		if (this.queuedGoogleSheets) {
-			const sheetsRecord = {
-				timestamp: record.date,
-				playerCount: record.averagePlayerCount,
-				sampleCount: record.sampleCount,
-				maxPlayerCount: record.maxPlayerCount,
-				maxPlayerTimestamp: record.maxPlayerTimestamp,
-				minPlayerCount: record.minPlayerCount,
-				minPlayerTimestamp: record.minPlayerTimestamp,
-			};
-			savePromises.push(
-				this.queuedGoogleSheets.addDailyAverageRecord(sheetsRecord),
-			);
-		}
-
-		await Promise.all(savePromises);
-	}
-
-	async updateAllDailyAverages(): Promise<void> {
-		try {
-			this.logger.info("Updating all daily averages...");
-
-			const allRecords = await this.readAllRecords();
+			const allRecords = await readAllRecords();
 
 			if (allRecords.length === 0) {
-				this.logger.warn("No data to process");
+				logger.warn("No data to process");
 				return;
 			}
 
-			const grouped = this.groupByDate(allRecords);
+			const grouped = groupByDate(allRecords);
 
 			for (const [dateStr, records] of grouped) {
 				const date = new Date(dateStr);
-				await this.calculateAndSaveDailyAverage(date, records);
+				await calculateAndSaveDailyAverage(date, records);
 			}
 
-			this.logger.info(`Updated daily averages for ${grouped.size} days`);
+			logger.info(`Updated daily averages for ${grouped.size} days`);
 		} catch (error) {
-			this.logger.error(
+			logger.error(
 				`Failed to update all daily averages: ${error instanceof Error ? error.message : "Unknown error"}`,
 			);
 			throw error;
 		}
 	}
 
-	async checkAndCalculateMissingAverages(): Promise<void> {
+	/**
+	 * @description 欠落している日次平均を検出して計算
+	 */
+	async function checkAndCalculateMissingAverages(): Promise<void> {
 		try {
-			this.logger.info("Checking for missing daily averages...");
+			logger.info("Checking for missing daily averages...");
 
-			const allRecords = await this.readAllRecords();
+			const allRecords = await readAllRecords();
 
 			if (allRecords.length === 0) {
-				this.logger.info("No source data to process");
+				logger.info("No source data to process");
 				return;
 			}
 
-			const grouped = this.groupByDate(allRecords);
+			const grouped = groupByDate(allRecords);
 			const today = new Date().toISOString().split("T")[0] ?? "";
 
 			const existingAverages = new Set<string>();
 			try {
-				const averageContent = await fs.readFile(
-					this.dailyAverageCsvPath,
-					"utf8",
-				);
+				const averageContent = await fs.readFile(dailyAverageCsvPath, "utf8");
 				const avgRecords = parsePlayerDataCsv(averageContent);
 				for (const record of avgRecords) {
 					existingAverages.add(record.timestamp.trim());
@@ -238,25 +280,29 @@ export class DailyAverageService {
 				.sort();
 
 			if (missingDates.length === 0) {
-				this.logger.info("All daily averages are up to date");
+				logger.info("All daily averages are up to date");
 				return;
 			}
 
-			this.logger.info(`Found ${missingDates.length} missing daily averages`);
+			logger.info(`Found ${missingDates.length} missing daily averages`);
 
 			for (const dateStr of missingDates) {
 				const date = new Date(dateStr);
-				await this.calculateAndSaveDailyAverage(date, grouped.get(dateStr));
+				await calculateAndSaveDailyAverage(date, grouped.get(dateStr));
 			}
 
-			this.logger.info(
-				`Calculated ${missingDates.length} missing daily averages`,
-			);
+			logger.info(`Calculated ${missingDates.length} missing daily averages`);
 		} catch (error) {
-			this.logger.error(
+			logger.error(
 				`Failed to check missing averages: ${error instanceof Error ? error.message : "Unknown error"}`,
 			);
 			throw error;
 		}
 	}
+
+	return {
+		calculateAndSaveDailyAverage,
+		updateAllDailyAverages,
+		checkAndCalculateMissingAverages,
+	};
 }

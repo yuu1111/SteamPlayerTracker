@@ -1,21 +1,20 @@
 import type { CronController } from "bun";
 import { config } from "../config/config";
-import { CsvWriter } from "../services/csvWriter";
-import { GoogleSheetsService } from "../services/googleSheets";
-import { SteamApiService } from "../services/steamApi";
+import { createCsvWriter } from "../services/csvWriter";
+import { createGoogleSheetsService } from "../services/googleSheets";
+import * as steamApi from "../services/steamApi";
 import type { PlayerDataRecord } from "../types/config";
 import { createLogger } from "../utils/logger";
-import { RetryHandler } from "../utils/retry";
+import { createRetryHandler } from "../utils/retry";
 
 const logger = createLogger("collect-data");
-const steamApi = new SteamApiService();
-const csvWriter = new CsvWriter(config.output.csvFilePath);
-const retryHandler = new RetryHandler(
-	config.retry.maxRetries,
-	config.retry.baseDelay,
-);
+const csvWriter = createCsvWriter(config.output.csvFilePath);
+const retryHandler = createRetryHandler({
+	maxRetries: config.retry.maxRetries,
+	baseDelay: config.retry.baseDelay,
+});
 const googleSheets = config.googleSheets.enabled
-	? new GoogleSheetsService(
+	? createGoogleSheetsService(
 			config.googleSheets.spreadsheetId,
 			config.googleSheets.sheetName,
 			config.googleSheets.serviceAccountKeyPath,

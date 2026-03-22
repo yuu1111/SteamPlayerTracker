@@ -1,15 +1,15 @@
 import type { CronController } from "bun";
 import { config } from "../config/config";
-import { DailyAverageService } from "../services/dailyAverageService";
+import { createDailyAverageService } from "../services/dailyAverageService";
 import { createLogger } from "../utils/logger";
-import { RetryHandler } from "../utils/retry";
+import { createRetryHandler } from "../utils/retry";
 
 const logger = createLogger("daily-average");
-const retryHandler = new RetryHandler(
-	config.retry.maxRetries,
-	config.retry.baseDelay,
-);
-const dailyAverageService = new DailyAverageService(
+const retryHandler = createRetryHandler({
+	maxRetries: config.retry.maxRetries,
+	baseDelay: config.retry.baseDelay,
+});
+const dailyAverageService = createDailyAverageService(
 	config.output.csvFilePath,
 	config.output.dailyAverageCsvFilePath,
 	logger,

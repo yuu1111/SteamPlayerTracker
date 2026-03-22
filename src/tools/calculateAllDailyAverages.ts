@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import { config } from "../config/config";
-import { DailyAverageService } from "../services/dailyAverageService";
-import { GoogleSheetsService } from "../services/googleSheets";
+import { createDailyAverageService } from "../services/dailyAverageService";
+import { createGoogleSheetsService } from "../services/googleSheets";
 import { parseDailyAverageCsv } from "../utils/csv-parser";
 import { createLogger } from "../utils/logger";
 
@@ -11,7 +11,7 @@ async function calculateAllDailyAverages() {
 	try {
 		logger.info("Starting calculation of all daily averages...");
 
-		const dailyAverageService = new DailyAverageService(
+		const dailyAverageService = createDailyAverageService(
 			config.output.csvFilePath,
 			config.output.dailyAverageCsvFilePath,
 			logger,
@@ -22,7 +22,7 @@ async function calculateAllDailyAverages() {
 		if (config.googleSheets.enabled && config.output.dailyAverageCsvEnabled) {
 			logger.info("Starting bulk upload to Google Sheets...");
 
-			const dailyAverageGoogleSheets = new GoogleSheetsService(
+			const dailyAverageGoogleSheets = createGoogleSheetsService(
 				config.googleSheets.spreadsheetId,
 				config.googleSheets.dailyAverageSheetName,
 				config.googleSheets.serviceAccountKeyPath,

@@ -2,25 +2,49 @@ import { promises as fs } from "node:fs";
 import { dirname } from "node:path";
 import type { PlayerDataRecord } from "../types/config";
 
-export class CsvWriter {
-	private filePath: string;
-
-	constructor(filePath: string) {
-		this.filePath = filePath;
+/**
+ * @description CSVライターを生成
+ * @param filePath - 出力先CSVファイルパス
+ * @returns CSV書き込み関数を持つオブジェクト
+ */
+export function createCsvWriter(filePath: string) {
+	/**
+	 * @description ファイルの存在を確認
+	 * @returns ファイルが存在するかどうか
+	 */
+	async function fileExists(): Promise<boolean> {
+		try {
+			await fs.access(filePath);
+			return true;
+		} catch {
+			return false;
+		}
 	}
 
-	async writeRecord(record: PlayerDataRecord): Promise<void> {
-		try {
-			await this.ensureDirectoryExists();
+	/**
+	 * @description 出力先ディレクトリを確保
+	 */
+	async function ensureDirectoryExists(): Promise<void> {
+		const dir = dirname(filePath);
+		await fs.mkdir(dir, { recursive: true });
+	}
 
-			const fileExists = await this.fileExists();
+	/**
+	 * @description プレイヤーデータレコードをCSVに書き込み
+	 * @param record - プレイヤーデータレコード
+	 */
+	async function writeRecord(record: PlayerDataRecord): Promise<void> {
+		try {
+			await ensureDirectoryExists();
+
+			const exists = await fileExists();
 			const csvLine = `${record.timestamp},${record.playerCount}\n`;
 
-			if (!fileExists) {
+			if (!exists) {
 				const header = "timestamp,player_count\n";
-				await fs.writeFile(this.filePath, header + csvLine, "utf8");
+				await fs.writeFile(filePath, header + csvLine, "utf8");
 			} else {
-				await fs.appendFile(this.filePath, csvLine, "utf8");
+				await fs.appendFile(filePath, csvLine, "utf8");
 			}
 		} catch (error) {
 			throw new Error(
@@ -29,7 +53,17 @@ export class CsvWriter {
 		}
 	}
 
-	async writeDailyAverageRecord(
+	/**
+	 * @description 日次平均レコードをCSVに書き込み
+	 * @param date - 日付文字列
+	 * @param averagePlayerCount - 平均プレイヤー数
+	 * @param sampleCount - サンプル数
+	 * @param maxPlayerCount - 最大プレイヤー数
+	 * @param maxPlayerTimestamp - 最大プレイヤー数の時刻
+	 * @param minPlayerCount - 最小プレイヤー数
+	 * @param minPlayerTimestamp - 最小プレイヤー数の時刻
+	 */
+	async function writeDailyAverageRecord(
 		date: string,
 		averagePlayerCount: number,
 		sampleCount: number,
@@ -39,9 +73,9 @@ export class CsvWriter {
 		minPlayerTimestamp?: string,
 	): Promise<void> {
 		try {
-			await this.ensureDirectoryExists();
+			await ensureDirectoryExists();
 
-			const fileExists = await this.fileExists();
+			const exists = await fileExists();
 
 			let csvLine: string;
 			if (
@@ -55,14 +89,14 @@ export class CsvWriter {
 				csvLine = `${date},${averagePlayerCount},${sampleCount}\n`;
 			}
 
-			if (!fileExists) {
+			if (!exists) {
 				const header =
 					maxPlayerCount !== undefined
 						? "date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp\n"
 						: "date,average_player_count,sample_count\n";
-				await fs.writeFile(this.filePath, header + csvLine, "utf8");
+				await fs.writeFile(filePath, header + csvLine, "utf8");
 			} else {
-				await fs.appendFile(this.filePath, csvLine, "utf8");
+				await fs.appendFile(filePath, csvLine, "utf8");
 			}
 		} catch (error) {
 			throw new Error(
@@ -71,17 +105,10 @@ export class CsvWriter {
 		}
 	}
 
-	private async fileExists(): Promise<boolean> {
-		try {
-			await fs.access(this.filePath);
-			return true;
-		} catch {
-			return false;
-		}
-	}
-
-	private async ensureDirectoryExists(): Promise<void> {
-		const dir = dirname(this.filePath);
-		await fs.mkdir(dir, { recursive: true });
-	}
+	return { writeRecord, writeDailyAverageRecord };
 }
+
+/**
+ * @description createCsvWriterの返り値の型
+ */
+export type CsvWriter = ReturnType<typeof createCsvWriter>;
