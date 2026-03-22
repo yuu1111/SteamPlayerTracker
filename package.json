@@ -5,7 +5,7 @@
 	"description": "Track Steam game concurrent player counts and export to CSV/Google Sheets",
 	"main": "dist/main",
 	"scripts": {
-		"build": "bun build src/main.ts src/tools/calculateAllDailyAverages.ts src/tools/syncGoogleSheets.ts src/tools/generateCharts.ts --outdir dist --target node --format esm --splitting",
+		"build": "bun build src/main.ts src/workers/collect-data.ts src/workers/daily-average.ts src/tools/calculateAllDailyAverages.ts src/tools/syncGoogleSheets.ts src/tools/generateCharts.ts --outdir dist --target node --format esm --splitting",
 		"start": "bun dist/main.js",
 		"dev": "bun --watch src/main.ts",
 		"typecheck": "tsc --noEmit",
@@ -39,7 +39,6 @@
 		"dayjs": "^1.11.20",
 		"dev-clean": "^1.0.6",
 		"googleapis": "^171.4.0",
-		"node-cron": "^4.2.1",
 		"winston": "^3.19.0"
 	},
 	"devDependencies": {

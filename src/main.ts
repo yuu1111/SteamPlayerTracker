@@ -3,7 +3,6 @@ import { CsvWriter } from "./services/csvWriter";
 import { DailyAverageService } from "./services/dailyAverageService";
 import { GoogleSheetsService } from "./services/googleSheets";
 import { QueuedGoogleSheetsService } from "./services/queuedGoogleSheets";
-import { Scheduler } from "./services/scheduler";
 import { SteamApiService } from "./services/steamApi";
 import type { PlayerDataRecord } from "./types/config";
 import { createLogger } from "./utils/logger";
@@ -41,16 +40,15 @@ export class SteamPlayerTracker {
 	private dailyAverageGoogleSheets: GoogleSheetsService | undefined;
 	private queuedGoogleSheets: QueuedGoogleSheetsService | undefined;
 	private dailyAverageService: DailyAverageService | undefined;
-	private scheduler: Scheduler;
 	private retryHandler: RetryHandler;
 	private logger: ReturnType<typeof createLogger>;
 	private gameName: string | undefined;
+	private cronJobNames: string[] = [];
 
 	constructor() {
 		this.logger = createLogger("SteamPlayerTracker");
 		this.steamApi = new SteamApiService();
 		this.csvWriter = new CsvWriter(config.output.csvFilePath);
-		this.scheduler = new Scheduler();
 		this.retryHandler = new RetryHandler(
 			config.retry.maxRetries,
 			config.retry.baseDelay,
@@ -137,18 +135,7 @@ export class SteamPlayerTracker {
 				await this.dailyAverageService.checkAndCalculateMissingAverages();
 			}
 
-			this.scheduler.scheduleDataCollection(
-				config.scheduling.collectionMinutes,
-				() => this.collectAndSaveData(),
-			);
-
-			if (config.output.dailyAverageCsvEnabled && this.dailyAverageService) {
-				this.scheduler.scheduleDailyTask(
-					config.scheduling.dailyAverageHour,
-					() => this.calculateDailyAverage(),
-				);
-			}
-
+			await this.registerCronJobs();
 			this.setupGracefulShutdown();
 
 			this.logger.info("Steam Player Tracker started successfully");
@@ -168,7 +155,7 @@ export class SteamPlayerTracker {
 			);
 			if (config.googleSheets.enabled) {
 				console.log(
-					"Manual sync: run 'npm run sync-google-sheets' to sync CSV data",
+					"Manual sync: run 'bun run sync-google-sheets' to sync CSV data",
 				);
 			}
 			console.log("Press Ctrl+C to stop");
@@ -178,6 +165,41 @@ export class SteamPlayerTracker {
 			});
 			throw error;
 		}
+	}
+
+	private async registerCronJobs(): Promise<void> {
+		const collectWorker = "./workers/collect-data.ts";
+		const dailyWorker = "./workers/daily-average.ts";
+
+		for (const minute of config.scheduling.collectionMinutes) {
+			const cronExpr = `${minute} * * * *`;
+			const name = `steam-tracker-collect-${minute}`;
+			await Bun.cron(collectWorker, cronExpr, name);
+			this.cronJobNames.push(name);
+			this.logger.info(`Registered cron job: ${name} (${cronExpr})`);
+		}
+
+		if (config.output.dailyAverageCsvEnabled) {
+			const cronExpr = `0 ${config.scheduling.dailyAverageHour} * * *`;
+			const name = "steam-tracker-daily-avg";
+			await Bun.cron(dailyWorker, cronExpr, name);
+			this.cronJobNames.push(name);
+			this.logger.info(`Registered cron job: ${name} (${cronExpr})`);
+		}
+	}
+
+	private async removeCronJobs(): Promise<void> {
+		for (const name of this.cronJobNames) {
+			try {
+				await Bun.cron.remove(name);
+				this.logger.info(`Removed cron job: ${name}`);
+			} catch (error) {
+				this.logger.warn(`Failed to remove cron job: ${name}`, {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			}
+		}
+		this.cronJobNames = [];
 	}
 
 	private async validateConfiguration(): Promise<void> {
@@ -245,38 +267,11 @@ export class SteamPlayerTracker {
 		}
 	}
 
-	private async calculateDailyAverage(): Promise<void> {
-		if (!this.dailyAverageService) {
-			return;
-		}
-
-		try {
-			this.logger.info("Starting daily average calculation...");
-
-			const yesterday = new Date();
-			yesterday.setDate(yesterday.getDate() - 1);
-
-			const service = this.dailyAverageService;
-			if (!service) return;
-
-			await this.retryHandler.executeWithRetry(
-				() => service.calculateAndSaveDailyAverage(yesterday),
-				"Daily average calculation",
-			);
-
-			this.logger.info("Daily average calculation completed successfully");
-		} catch (error) {
-			this.logger.error("Daily average calculation failed", {
-				error: error instanceof Error ? error.message : String(error),
-			});
-		}
-	}
-
 	private setupGracefulShutdown(): void {
-		const shutdown = (signal: string) => {
+		const shutdown = async (signal: string) => {
 			this.logger.info(`Received ${signal}. Shutting down gracefully...`);
 
-			this.scheduler.stopAll();
+			await this.removeCronJobs();
 
 			this.logger.info("Steam Player Tracker stopped");
 			process.exit(0);
