@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const packageJsonPath = path.join(__dirname, '..', 'package.json');
+
+function runCommand(command, description) {
+  console.log(`\n${description}...`);
+  try {
+    execSync(command, { stdio: 'inherit', timeout: 60000 });
+    console.log(`${description} completed`);
+  } catch (error) {
+    console.error(`${description} failed:`, error.message);
+    process.exit(1);
+  }
+}
+
+function updateVersion(type = 'patch') {
+  console.log(`\nUpdating version (${type})...`);
+
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const currentVersion = packageJson.version;
+  const versionParts = currentVersion.split('.').map(Number);
+
+  switch (type) {
+    case 'major':
+      versionParts[0]++;
+      versionParts[1] = 0;
+      versionParts[2] = 0;
+      break;
+    case 'minor':
+      versionParts[1]++;
+      versionParts[2] = 0;
+      break;
+    case 'patch':
+    default:
+      versionParts[2]++;
+      break;
+  }
+
+  const newVersion = versionParts.join('.');
+  packageJson.version = newVersion;
+
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, '\t') + '\n');
+
+  console.log(`Version updated: ${currentVersion} -> ${newVersion}`);
+  return newVersion;
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const versionType = args[0] || 'patch';
+  const skipTests = args.includes('--skip-tests');
+
+  console.log('Starting release process...');
+
+  try {
+    const gitStatus = execSync('git status --porcelain', { encoding: 'utf8' });
+    if (gitStatus.trim()) {
+      console.warn('Uncommitted changes detected:');
+      console.log(gitStatus);
+      console.log('Please commit your changes before running the release.');
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('Git status check failed:', error.message);
+    process.exit(1);
+  }
+
+  runCommand('bun install', 'Installing dependencies');
+
+  runCommand('bun run typecheck', 'TypeScript type check');
+
+  if (!skipTests) {
+    try {
+      runCommand('bun run lint', 'Biome check');
+    } catch (error) {
+      console.log('Biome reported issues, continuing...');
+    }
+  }
+
+  runCommand('bun run clean', 'Cleaning dist directory');
+  runCommand('bun run build', 'TypeScript compilation');
+
+  const newVersion = updateVersion(versionType);
+
+  runCommand('git add .', 'Git staging');
+  runCommand(`git commit -m "chore(release): v${newVersion}"`, 'Creating release commit');
+
+  runCommand(`git tag -a v${newVersion} -m "Release v${newVersion}"`, 'Creating git tag');
+
+  console.log('\nRelease preparation complete!');
+  console.log(`New version: v${newVersion}`);
+  console.log('\nNext steps:');
+  console.log('  1. git push origin main');
+  console.log(`  2. git push origin v${newVersion}`);
+  console.log('  3. Create release notes on GitHub Releases');
+}
+
+main();

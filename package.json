@@ -1,53 +1,56 @@
 {
-  "name": "steam-player-tracker",
-  "version": "1.3.0",
-  "description": "Track Steam game concurrent player counts and export to CSV/Google Sheets",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "watch": "tsc --watch",
-    "lint": "eslint src/**/*.ts",
-    "typecheck": "tsc --noEmit",
-    "calculate-daily-averages": "node dist/tools/calculateAllDailyAverages.js",
-    "sync-google-sheets": "node dist/tools/syncGoogleSheets.js",
-    "generate-charts": "node dist/tools/generateCharts.js",
-    "kill": "pwsh -ExecutionPolicy Bypass -File Scripts/Kill-SteamTracker.ps1",
-    "setup": "npm install && npm run build",
-    "release": "node scripts/release.js",
-    "release:minor": "node scripts/release.js minor",
-    "release:major": "node scripts/release.js major",
-    "prerelease": "npm run test:ci",
-    "test:ci": "npm run typecheck && npm run lint",
-    "prepare-release": "npm run clean && npm run build && npm run test:ci"
-  },
-  "keywords": [
-    "steam",
-    "player-tracking",
-    "csv",
-    "google-sheets"
-  ],
-  "author": "yuu1111",
-  "license": "MIT",
-  "dependencies": {
-    "axios": "^1.13.6",
-    "chart.js": "^4.5.1",
-    "chartjs-node-canvas": "^5.0.0",
-    "date-fns": "^4.1.0",
-    "dayjs": "^1.11.20",
-    "dotenv": "^17.3.1",
-    "googleapis": "^171.4.0",
-    "node-cron": "^4.2.1",
-    "winston": "^3.19.0"
-  },
-  "devDependencies": {
-    "@types/node": "^25.5.0",
-    "@types/node-cron": "^3.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.57.1",
-    "@typescript-eslint/parser": "^8.57.1",
-    "eslint": "^10.1.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.9.3"
-  }
+	"name": "steam-player-tracker",
+	"version": "1.3.0",
+	"type": "module",
+	"description": "Track Steam game concurrent player counts and export to CSV/Google Sheets",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"dev": "tsx src/index.ts",
+		"watch": "tsc --watch",
+		"lint": "biome check src",
+		"lint:fix": "biome check --write src",
+		"format": "biome format --write src",
+		"typecheck": "tsc --noEmit",
+		"calculate-daily-averages": "node dist/tools/calculateAllDailyAverages.js",
+		"sync-google-sheets": "node dist/tools/syncGoogleSheets.js",
+		"generate-charts": "node dist/tools/generateCharts.js",
+		"kill": "pwsh -ExecutionPolicy Bypass -File Scripts/Kill-SteamTracker.ps1",
+		"setup": "bun install && bun run build",
+		"release": "node scripts/release.cjs",
+		"release:minor": "node scripts/release.cjs minor",
+		"release:major": "node scripts/release.cjs major",
+		"prerelease": "bun run test:ci",
+		"test:ci": "bun run typecheck && bun run lint",
+		"prepare-release": "bun run clean && bun run build && bun run test:ci",
+		"clean": "rm -rf dist"
+	},
+	"keywords": [
+		"steam",
+		"player-tracking",
+		"csv",
+		"google-sheets"
+	],
+	"author": "yuu1111",
+	"license": "MIT",
+	"dependencies": {
+		"axios": "^1.13.6",
+		"chart.js": "^4.5.1",
+		"chartjs-node-canvas": "^5.0.0",
+		"date-fns": "^4.1.0",
+		"dayjs": "^1.11.20",
+		"dotenv": "^17.3.1",
+		"googleapis": "^171.4.0",
+		"node-cron": "^4.2.1",
+		"winston": "^3.19.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.8",
+		"@types/node": "^25.5.0",
+		"@yuu1111/biome-config": "^1.0.3",
+		"@yuu1111/tsconfig": "^1.0.2",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
+	}
 }
