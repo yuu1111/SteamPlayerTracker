@@ -11,17 +11,15 @@
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"format": "biome check --write --unsafe .",
-		"calculate-daily-averages": "bun dist/tools/calculateAllDailyAverages.js",
-		"sync-google-sheets": "bun dist/tools/syncGoogleSheets.js",
-		"generate-charts": "bun dist/tools/generateCharts.js",
+		"calculate-daily-averages": "bun src/tools/calculateAllDailyAverages.ts",
+		"sync-google-sheets": "bun src/tools/syncGoogleSheets.ts",
+		"generate-charts": "bun src/tools/generateCharts.ts",
 		"kill": "dev-clean --yes",
 		"setup": "bun install && bun run build",
 		"release": "bun scripts/release.ts",
 		"release:minor": "bun scripts/release.ts minor",
 		"release:major": "bun scripts/release.ts major",
-		"prerelease": "bun run test:ci",
-		"test:ci": "bun run typecheck && bun run lint",
-		"prepare-release": "bun run clean && bun run build && bun run test:ci"
+		"prerelease": "bun run test:ci"
 	},
 	"keywords": [
 		"steam",
