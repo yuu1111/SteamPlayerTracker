@@ -1,26 +1,24 @@
-import { promises as fs } from "node:fs";
-import { resolve } from "node:path";
-import { config } from "../config/config";
+import { config } from "../config";
 import {
-	createGoogleSheetsService,
-	type GoogleSheetsService,
+	createSheetAccessor,
+	dailyAverageColumnDef,
+	playerDataColumnDef,
 } from "../services/googleSheets";
 import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csv-parser";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger("sync-google-sheets");
 
-async function syncPlayerData(
-	googleSheets: GoogleSheetsService,
-): Promise<void> {
-	const csvPath = resolve(
-		import.meta.dirname,
-		"../../steam_concurrent_players.csv",
-	);
+/**
+ * @description プレイヤーデータをGoogle Sheetsに同期
+ * @param csvPath - CSVファイルパス
+ */
+async function syncPlayerData(csvPath: string): Promise<void> {
+	if (!config.googleSheets.enabled) return;
 
 	let content: string;
 	try {
-		content = await fs.readFile(csvPath, "utf8");
+		content = await Bun.file(csvPath).text();
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
 			logger.info("No player data to sync");
@@ -36,23 +34,29 @@ async function syncPlayerData(
 		return;
 	}
 
+	const googleSheets = createSheetAccessor(
+		config.googleSheets.spreadsheetId,
+		config.googleSheets.sheetName,
+		config.googleSheets.serviceAccountKeyPath,
+		playerDataColumnDef,
+	);
+
 	logger.info(`Parsed ${records.length} valid records`);
 	logger.info("Replacing all Google Sheets data with sorted CSV data...");
-	await googleSheets.replaceAllRecords(records);
+	await googleSheets.replaceAll(records);
 	logger.info("Player data sync completed - all data replaced and sorted");
 }
 
-async function syncDailyAverages(
-	googleSheets: GoogleSheetsService,
-): Promise<void> {
-	const csvPath = resolve(
-		import.meta.dirname,
-		"../../steam_daily_averages.csv",
-	);
+/**
+ * @description 日次平均データをGoogle Sheetsに同期
+ * @param csvPath - CSVファイルパス
+ */
+async function syncDailyAverages(csvPath: string): Promise<void> {
+	if (!config.googleSheets.enabled) return;
 
 	let content: string;
 	try {
-		content = await fs.readFile(csvPath, "utf8");
+		content = await Bun.file(csvPath).text();
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
 			logger.info("No daily average data to sync");
@@ -61,31 +65,31 @@ async function syncDailyAverages(
 		throw error;
 	}
 
-	const avgRecords = parseDailyAverageCsv(content);
+	const records = parseDailyAverageCsv(content);
 
-	if (avgRecords.length === 0) {
+	if (records.length === 0) {
 		logger.info("No daily average data to sync");
 		return;
 	}
 
-	const records = avgRecords.map((r) => ({
-		timestamp: r.date,
-		playerCount: r.averagePlayerCount,
-		sampleCount: r.sampleCount,
-		maxPlayerCount: r.maxPlayerCount,
-		maxPlayerTimestamp: r.maxPlayerTimestamp,
-		minPlayerCount: r.minPlayerCount,
-		minPlayerTimestamp: r.minPlayerTimestamp,
-	}));
+	const googleSheets = createSheetAccessor(
+		config.googleSheets.spreadsheetId,
+		config.googleSheets.dailyAverageSheetName,
+		config.googleSheets.serviceAccountKeyPath,
+		dailyAverageColumnDef,
+	);
 
 	logger.info(`Parsed ${records.length} valid daily average records`);
 	logger.info(
 		"Replacing all Google Sheets daily average data with sorted CSV data...",
 	);
-	await googleSheets.replaceAllDailyAverageRecords(records);
+	await googleSheets.replaceAll(records);
 	logger.info("Daily average sync completed - all data replaced and sorted");
 }
 
+/**
+ * @description メイン処理
+ */
 async function main(): Promise<void> {
 	try {
 		if (!config.googleSheets.enabled) {
@@ -98,23 +102,11 @@ async function main(): Promise<void> {
 
 		logger.info("Starting Google Sheets sync...");
 
-		const playerDataSheets = createGoogleSheetsService(
-			config.googleSheets.spreadsheetId,
-			config.googleSheets.sheetName,
-			config.googleSheets.serviceAccountKeyPath,
-		);
-
-		const dailyAverageSheets = createGoogleSheetsService(
-			config.googleSheets.spreadsheetId,
-			config.googleSheets.dailyAverageSheetName,
-			config.googleSheets.serviceAccountKeyPath,
-		);
-
 		logger.info("Syncing player data...");
-		await syncPlayerData(playerDataSheets);
+		await syncPlayerData(config.output.csvFilePath);
 
 		logger.info("Syncing daily averages...");
-		await syncDailyAverages(dailyAverageSheets);
+		await syncDailyAverages(config.output.dailyAverageCsvFilePath);
 
 		logger.info("All data synced successfully");
 		console.log("Google Sheets sync completed successfully!");

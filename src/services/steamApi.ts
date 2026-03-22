@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
 	steamAppDetailsSchema,
 	steamPlayerCountResponseSchema,
@@ -21,15 +20,21 @@ const STORE_BASE_URL = "https://store.steampowered.com";
  * @throws プレイヤー数が0の場合またはAPI通信エラー
  */
 export async function getCurrentPlayerCount(appId: number): Promise<number> {
-	const url = `${BASE_URL}/ISteamUserStats/GetNumberOfCurrentPlayers/v1/`;
+	const url = `${BASE_URL}/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${appId}`;
 
 	try {
-		const response = await axios.get(url, {
-			params: { appid: appId },
-			timeout: 10000,
+		const response = await fetch(url, {
+			signal: AbortSignal.timeout(10000),
 		});
 
-		const parsed = steamPlayerCountResponseSchema.parse(response.data);
+		if (!response.ok) {
+			throw new Error(
+				`Steam API error: ${response.status} - ${response.statusText}`,
+			);
+		}
+
+		const data = await response.json();
+		const parsed = steamPlayerCountResponseSchema.parse(data);
 		const playerCount = parsed.response.player_count;
 
 		if (playerCount === 0) {
@@ -40,16 +45,8 @@ export async function getCurrentPlayerCount(appId: number): Promise<number> {
 
 		return playerCount;
 	} catch (error) {
-		if (axios.isAxiosError(error)) {
-			if (error.response) {
-				throw new Error(
-					`Steam API error: ${error.response.status} - ${error.response.statusText}`,
-				);
-			}
-			if (error.code === "ECONNABORTED") {
-				throw new Error("Steam API request timeout");
-			}
-			throw new Error(`Network error: ${error.message}`);
+		if (error instanceof Error && error.name === "TimeoutError") {
+			throw new Error("Steam API request timeout");
 		}
 		throw error;
 	}
@@ -61,15 +58,17 @@ export async function getCurrentPlayerCount(appId: number): Promise<number> {
  * @returns ゲーム名(取得失敗時はnull)
  */
 export async function getGameName(appId: number): Promise<string | null> {
-	const url = `${STORE_BASE_URL}/api/appdetails`;
+	const url = `${STORE_BASE_URL}/api/appdetails?appids=${appId}&filters=basic`;
 
 	try {
-		const response = await axios.get(url, {
-			params: { appids: appId, filters: "basic" },
-			timeout: 10000,
+		const response = await fetch(url, {
+			signal: AbortSignal.timeout(10000),
 		});
 
-		const gameData = response.data?.[appId];
+		if (!response.ok) return null;
+
+		const data = (await response.json()) as Record<string, unknown>;
+		const gameData = data?.[String(appId)];
 		const parsed = steamAppDetailsSchema.safeParse(gameData);
 		if (parsed.success) {
 			return parsed.data.data.name;

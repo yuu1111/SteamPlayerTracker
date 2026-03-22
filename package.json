@@ -29,10 +29,8 @@
 	"author": "yuu1111",
 	"license": "MIT",
 	"dependencies": {
-		"axios": "^1.13.6",
 		"chart.js": "^4.5.1",
 		"chartjs-node-canvas": "^5.0.0",
-		"date-fns": "^4.1.0",
 		"dayjs": "^1.11.20",
 		"dev-clean": "^1.0.6",
 		"googleapis": "^171.4.0",

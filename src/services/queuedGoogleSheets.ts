@@ -1,9 +1,6 @@
-import type { PlayerDataRecord } from "../types/config";
+import type { DailyAverageRow, PlayerDataRow } from "../schemas/csv";
 import { createLogger } from "../utils/logger";
-import type {
-	DailyAverageSheetRecord,
-	GoogleSheetsService,
-} from "./googleSheets";
+import type { SheetAccessor } from "./googleSheets";
 
 /**
  * @description キュー内のレコード
@@ -14,7 +11,7 @@ import type {
  */
 interface QueuedRecord {
 	type: "player" | "dailyAverage";
-	data: PlayerDataRecord | DailyAverageSheetRecord;
+	data: PlayerDataRow | DailyAverageRow;
 	retryCount: number;
 	timestamp: number;
 }
@@ -23,8 +20,8 @@ interface QueuedRecord {
  * @description キュー付きGoogle Sheetsサービスの公開インターフェース
  */
 export interface QueuedGoogleSheetsService {
-	addPlayerRecord(record: PlayerDataRecord): Promise<void>;
-	addDailyAverageRecord(record: DailyAverageSheetRecord): Promise<void>;
+	addPlayerRecord(record: PlayerDataRow): Promise<void>;
+	addDailyAverageRecord(record: DailyAverageRow): Promise<void>;
 	dispose(): void;
 	getQueueStatus(): { queueLength: number; isProcessing: boolean };
 	processQueueNow(): Promise<void>;
@@ -32,14 +29,14 @@ export interface QueuedGoogleSheetsService {
 
 /**
  * @description リトライキュー付きGoogle Sheetsサービスを生成
- * @param playerDataSheets - プレイヤーデータ用Sheetsサービス
- * @param dailyAverageSheets - 日次平均用Sheetsサービス
+ * @param playerDataSheets - プレイヤーデータ用Sheetsアクセサ
+ * @param dailyAverageSheets - 日次平均用Sheetsアクセサ
  * @param logger - ロガー
  * @returns キュー管理関数を持つオブジェクト
  */
 export function createQueuedGoogleSheetsService(
-	playerDataSheets?: GoogleSheetsService,
-	dailyAverageSheets?: GoogleSheetsService,
+	playerDataSheets?: SheetAccessor<PlayerDataRow>,
+	dailyAverageSheets?: SheetAccessor<DailyAverageRow>,
 	logger?: ReturnType<typeof createLogger>,
 ): QueuedGoogleSheetsService {
 	const log = logger || createLogger("QueuedGoogleSheets");
@@ -53,9 +50,7 @@ export function createQueuedGoogleSheetsService(
 	 * @description キュー内のレコードを処理
 	 */
 	async function processQueue(): Promise<void> {
-		if (queue.length === 0) {
-			return;
-		}
+		if (queue.length === 0) return;
 
 		log.info(`Processing ${queue.length} queued records...`);
 		const processed: number[] = [];
@@ -66,18 +61,16 @@ export function createQueuedGoogleSheetsService(
 
 			try {
 				if (queuedRecord.type === "player") {
-					await playerDataSheets?.appendRecord(
-						queuedRecord.data as PlayerDataRecord,
-					);
+					await playerDataSheets?.append(queuedRecord.data as PlayerDataRow);
 					log.info(
-						`Successfully processed queued player record: ${(queuedRecord.data as PlayerDataRecord).timestamp}`,
+						`Successfully processed queued player record: ${(queuedRecord.data as PlayerDataRow).timestamp}`,
 					);
 				} else {
-					await dailyAverageSheets?.appendDailyAverageRecord(
-						queuedRecord.data as DailyAverageSheetRecord,
+					await dailyAverageSheets?.append(
+						queuedRecord.data as DailyAverageRow,
 					);
 					log.info(
-						`Successfully processed queued daily average record: ${(queuedRecord.data as DailyAverageSheetRecord).timestamp}`,
+						`Successfully processed queued daily average record: ${(queuedRecord.data as DailyAverageRow).date}`,
 					);
 				}
 
@@ -117,9 +110,7 @@ export function createQueuedGoogleSheetsService(
 	 */
 	function startQueueProcessor(): void {
 		intervalId = setInterval(async () => {
-			if (isProcessing || queue.length === 0) {
-				return;
-			}
+			if (isProcessing || queue.length === 0) return;
 
 			isProcessing = true;
 			await processQueue();
@@ -131,13 +122,13 @@ export function createQueuedGoogleSheetsService(
 	 * @description プレイヤーデータレコードを追加(失敗時はキューイング)
 	 * @param record - プレイヤーデータレコード
 	 */
-	async function addPlayerRecord(record: PlayerDataRecord): Promise<void> {
+	async function addPlayerRecord(record: PlayerDataRow): Promise<void> {
 		if (!playerDataSheets) {
 			throw new Error("Player data sheets service not initialized");
 		}
 
 		try {
-			await playerDataSheets.appendRecord(record);
+			await playerDataSheets.append(record);
 			log.info(`Successfully wrote player record: ${record.timestamp}`);
 		} catch (error) {
 			log.warn(
@@ -158,19 +149,17 @@ export function createQueuedGoogleSheetsService(
 	 * @description 日次平均レコードを追加(失敗時はキューイング)
 	 * @param record - 日次平均レコード
 	 */
-	async function addDailyAverageRecord(
-		record: DailyAverageSheetRecord,
-	): Promise<void> {
+	async function addDailyAverageRecord(record: DailyAverageRow): Promise<void> {
 		if (!dailyAverageSheets) {
 			throw new Error("Daily average sheets service not initialized");
 		}
 
 		try {
-			await dailyAverageSheets.appendDailyAverageRecord(record);
-			log.info(`Successfully wrote daily average record: ${record.timestamp}`);
+			await dailyAverageSheets.append(record);
+			log.info(`Successfully wrote daily average record: ${record.date}`);
 		} catch (error) {
 			log.warn(
-				`Failed to write daily average record immediately, queuing for retry: ${record.timestamp}`,
+				`Failed to write daily average record immediately, queuing for retry: ${record.date}`,
 				{ error },
 			);
 
@@ -198,10 +187,7 @@ export function createQueuedGoogleSheetsService(
 	 * @returns キュー長と処理中フラグ
 	 */
 	function getQueueStatus(): { queueLength: number; isProcessing: boolean } {
-		return {
-			queueLength: queue.length,
-			isProcessing,
-		};
+		return { queueLength: queue.length, isProcessing };
 	}
 
 	/**
@@ -218,7 +204,6 @@ export function createQueuedGoogleSheetsService(
 		isProcessing = false;
 	}
 
-	// キュー処理を即時開始(現状のコンストラクタと同じ振る舞い)
 	startQueueProcessor();
 
 	return {

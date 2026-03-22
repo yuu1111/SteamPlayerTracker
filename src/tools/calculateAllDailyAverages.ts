@@ -1,10 +1,15 @@
-import { promises as fs } from "node:fs";
-import { config } from "../config/config";
+import { config } from "../config";
 import { createDailyAverageService } from "../services/dailyAverageService";
-import { createGoogleSheetsService } from "../services/googleSheets";
+import {
+	createSheetAccessor,
+	dailyAverageColumnDef,
+} from "../services/googleSheets";
 import { parseDailyAverageCsv } from "../utils/csv-parser";
 import { createLogger } from "../utils/logger";
 
+/**
+ * @description 全日次平均を再計算し、オプションでGoogle Sheetsにアップロード
+ */
 async function calculateAllDailyAverages() {
 	const logger = createLogger("calculate-daily-averages");
 
@@ -22,37 +27,26 @@ async function calculateAllDailyAverages() {
 		if (config.googleSheets.enabled && config.output.dailyAverageCsvEnabled) {
 			logger.info("Starting bulk upload to Google Sheets...");
 
-			const dailyAverageGoogleSheets = createGoogleSheetsService(
+			const googleSheets = createSheetAccessor(
 				config.googleSheets.spreadsheetId,
 				config.googleSheets.dailyAverageSheetName,
 				config.googleSheets.serviceAccountKeyPath,
+				dailyAverageColumnDef,
 			);
 
-			const csvContent = await fs.readFile(
+			const csvContent = await Bun.file(
 				config.output.dailyAverageCsvFilePath,
-				"utf8",
-			);
+			).text();
 
-			const avgRecords = parseDailyAverageCsv(csvContent);
+			const records = parseDailyAverageCsv(csvContent);
 
-			if (avgRecords.length === 0) {
+			if (records.length === 0) {
 				logger.warn("No daily average data to upload to Google Sheets");
 			} else {
-				const records = avgRecords.map((r) => ({
-					timestamp: r.date,
-					playerCount: r.averagePlayerCount,
-					sampleCount: r.sampleCount,
-					maxPlayerCount: r.maxPlayerCount,
-					maxPlayerTimestamp: r.maxPlayerTimestamp,
-					minPlayerCount: r.minPlayerCount,
-					minPlayerTimestamp: r.minPlayerTimestamp,
-				}));
-
 				logger.info(
 					`Uploading ${records.length} daily average records to Google Sheets...`,
 				);
-
-				await dailyAverageGoogleSheets.replaceAllDailyAverageRecords(records);
+				await googleSheets.replaceAll(records);
 				logger.info("Bulk upload to Google Sheets completed successfully");
 			}
 		}

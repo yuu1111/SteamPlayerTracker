@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import { dirname } from "node:path";
-import type { PlayerDataRecord } from "../types/config";
+import type { PlayerDataRow } from "../schemas/csv";
 
 /**
  * @description CSVライターを生成
@@ -33,7 +33,7 @@ export function createCsvWriter(filePath: string) {
 	 * @description プレイヤーデータレコードをCSVに書き込み
 	 * @param record - プレイヤーデータレコード
 	 */
-	async function writeRecord(record: PlayerDataRecord): Promise<void> {
+	async function writeRecord(record: PlayerDataRow): Promise<void> {
 		try {
 			await ensureDirectoryExists();
 

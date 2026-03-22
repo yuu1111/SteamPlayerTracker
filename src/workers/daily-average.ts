@@ -1,22 +1,13 @@
 import type { CronController } from "bun";
-import { config } from "../config/config";
-import { createDailyAverageService } from "../services/dailyAverageService";
-import { createLogger } from "../utils/logger";
-import { createRetryHandler } from "../utils/retry";
+import { getServices } from "../services/container";
 
-const logger = createLogger("daily-average");
-const retryHandler = createRetryHandler({
-	maxRetries: config.retry.maxRetries,
-	baseDelay: config.retry.baseDelay,
-});
-const dailyAverageService = createDailyAverageService(
-	config.output.csvFilePath,
-	config.output.dailyAverageCsvFilePath,
-	logger,
-);
-
+/**
+ * @description 前日の日次平均を計算
+ */
 async function calculateDailyAverage(): Promise<void> {
-	if (!config.output.dailyAverageCsvEnabled) {
+	const { config, logger, retryHandler, dailyAverageService } = getServices();
+
+	if (!config.output.dailyAverageCsvEnabled || !dailyAverageService) {
 		return;
 	}
 

@@ -1,27 +1,15 @@
 import type { CronController } from "bun";
-import { config } from "../config/config";
-import { createCsvWriter } from "../services/csvWriter";
-import { createGoogleSheetsService } from "../services/googleSheets";
+import type { PlayerDataRow } from "../schemas/csv";
+import { getServices } from "../services/container";
 import * as steamApi from "../services/steamApi";
-import type { PlayerDataRecord } from "../types/config";
-import { createLogger } from "../utils/logger";
-import { createRetryHandler } from "../utils/retry";
 
-const logger = createLogger("collect-data");
-const csvWriter = createCsvWriter(config.output.csvFilePath);
-const retryHandler = createRetryHandler({
-	maxRetries: config.retry.maxRetries,
-	baseDelay: config.retry.baseDelay,
-});
-const googleSheets = config.googleSheets.enabled
-	? createGoogleSheetsService(
-			config.googleSheets.spreadsheetId,
-			config.googleSheets.sheetName,
-			config.googleSheets.serviceAccountKeyPath,
-		)
-	: null;
-
+/**
+ * @description プレイヤーデータを収集してCSV/Sheetsに保存
+ */
 async function collectAndSaveData(): Promise<void> {
+	const { config, logger, csvWriter, retryHandler, queuedGoogleSheets } =
+		getServices();
+
 	try {
 		logger.info("Starting data collection...");
 
@@ -30,7 +18,7 @@ async function collectAndSaveData(): Promise<void> {
 			"Steam API data collection",
 		);
 
-		const record: PlayerDataRecord = {
+		const record: PlayerDataRow = {
 			timestamp: new Date().toISOString().replace("T", " ").slice(0, 19),
 			playerCount,
 		};
@@ -46,8 +34,8 @@ async function collectAndSaveData(): Promise<void> {
 			);
 		}
 
-		if (googleSheets) {
-			savePromises.push(googleSheets.appendRecord(record));
+		if (queuedGoogleSheets) {
+			savePromises.push(queuedGoogleSheets.addPlayerRecord(record));
 		}
 
 		await Promise.all(savePromises);
@@ -64,6 +52,8 @@ async function collectAndSaveData(): Promise<void> {
 		});
 	}
 }
+
+export { collectAndSaveData };
 
 export default {
 	async scheduled(_controller: CronController) {

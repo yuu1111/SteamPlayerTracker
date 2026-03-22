@@ -1,29 +1,9 @@
 import { promises as fs } from "node:fs";
-import type { PlayerDataRecord } from "../types/config";
+import type { DailyAverageRow, PlayerDataRow } from "../schemas/csv";
 import { parsePlayerDataCsv } from "../utils/csv-parser";
 import type { createLogger } from "../utils/logger";
 import { createCsvWriter } from "./csvWriter";
 import type { QueuedGoogleSheetsService } from "./queuedGoogleSheets";
-
-/**
- * @description 日次平均レコードの型
- * @property date - 日付文字列
- * @property averagePlayerCount - 平均プレイヤー数
- * @property sampleCount - サンプル数
- * @property maxPlayerCount - 最大プレイヤー数
- * @property maxPlayerTimestamp - 最大プレイヤー数の時刻
- * @property minPlayerCount - 最小プレイヤー数
- * @property minPlayerTimestamp - 最小プレイヤー数の時刻
- */
-export interface DailyAverageRecord {
-	date: string;
-	averagePlayerCount: number;
-	sampleCount: number;
-	maxPlayerCount: number;
-	maxPlayerTimestamp: string;
-	minPlayerCount: number;
-	minPlayerTimestamp: string;
-}
 
 /**
  * @description 日次平均サービスの公開インターフェース
@@ -31,7 +11,7 @@ export interface DailyAverageRecord {
 export interface DailyAverageService {
 	calculateAndSaveDailyAverage(
 		date: Date,
-		preloadedData?: PlayerDataRecord[],
+		preloadedData?: PlayerDataRow[],
 	): Promise<void>;
 	updateAllDailyAverages(): Promise<void>;
 	checkAndCalculateMissingAverages(): Promise<void>;
@@ -57,7 +37,7 @@ export function createDailyAverageService(
 	 * @description ソースCSVから全レコードを読み込み
 	 * @returns プレイヤーデータレコードの配列
 	 */
-	async function readAllRecords(): Promise<PlayerDataRecord[]> {
+	async function readAllRecords(): Promise<PlayerDataRow[]> {
 		try {
 			const csvContent = await fs.readFile(sourceCsvPath, "utf8");
 			return parsePlayerDataCsv(csvContent);
@@ -74,10 +54,8 @@ export function createDailyAverageService(
 	 * @param records - プレイヤーデータレコードの配列
 	 * @returns 日付をキーとするレコードのMap
 	 */
-	function groupByDate(
-		records: PlayerDataRecord[],
-	): Map<string, PlayerDataRecord[]> {
-		const groups = new Map<string, PlayerDataRecord[]>();
+	function groupByDate(records: PlayerDataRow[]): Map<string, PlayerDataRow[]> {
+		const groups = new Map<string, PlayerDataRow[]>();
 		for (const record of records) {
 			const date = record.timestamp.split(" ")[0];
 			if (!date) continue;
@@ -96,7 +74,7 @@ export function createDailyAverageService(
 	 * @param dateStr - 日付文字列
 	 * @returns 該当日のプレイヤーデータレコード
 	 */
-	async function readDailyData(dateStr: string): Promise<PlayerDataRecord[]> {
+	async function readDailyData(dateStr: string): Promise<PlayerDataRow[]> {
 		const allRecords = await readAllRecords();
 		return allRecords.filter((r) => r.timestamp.startsWith(dateStr));
 	}
@@ -105,7 +83,7 @@ export function createDailyAverageService(
 	 * @description 平均レコードをCSVとGoogle Sheetsに保存
 	 * @param record - 日次平均レコード
 	 */
-	async function saveAverageRecord(record: DailyAverageRecord): Promise<void> {
+	async function saveAverageRecord(record: DailyAverageRow): Promise<void> {
 		const savePromises: Promise<void>[] = [];
 
 		savePromises.push(
@@ -121,16 +99,7 @@ export function createDailyAverageService(
 		);
 
 		if (queuedGoogleSheets) {
-			const sheetsRecord = {
-				timestamp: record.date,
-				playerCount: record.averagePlayerCount,
-				sampleCount: record.sampleCount,
-				maxPlayerCount: record.maxPlayerCount,
-				maxPlayerTimestamp: record.maxPlayerTimestamp,
-				minPlayerCount: record.minPlayerCount,
-				minPlayerTimestamp: record.minPlayerTimestamp,
-			};
-			savePromises.push(queuedGoogleSheets.addDailyAverageRecord(sheetsRecord));
+			savePromises.push(queuedGoogleSheets.addDailyAverageRecord(record));
 		}
 
 		await Promise.all(savePromises);
@@ -143,7 +112,7 @@ export function createDailyAverageService(
 	 */
 	async function calculateAndSaveDailyAverage(
 		date: Date,
-		preloadedData?: PlayerDataRecord[],
+		preloadedData?: PlayerDataRow[],
 	): Promise<void> {
 		try {
 			const dateStr = date.toISOString().split("T")[0] ?? "";
@@ -186,7 +155,7 @@ export function createDailyAverageService(
 				}
 			}
 
-			const averageRecord: DailyAverageRecord = {
+			const averageRecord: DailyAverageRow = {
 				date: dateStr,
 				averagePlayerCount: average,
 				sampleCount: validData.length,

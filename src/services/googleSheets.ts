@@ -3,92 +3,83 @@ import { JWT } from "google-auth-library";
 import type { sheets_v4 } from "googleapis";
 import { google } from "googleapis";
 import { googleServiceAccountSchema } from "../schemas/google-credentials";
-import type { PlayerDataRecord } from "../types/config";
 
 /**
- * @description Google Sheets日次平均レコードの型
- * @property timestamp - 日付文字列
- * @property playerCount - 平均プレイヤー数
- * @property sampleCount - サンプル数
- * @property maxPlayerCount - 最大プレイヤー数 @optional
- * @property maxPlayerTimestamp - 最大プレイヤー数の時刻 @optional
- * @property minPlayerCount - 最小プレイヤー数 @optional
- * @property minPlayerTimestamp - 最小プレイヤー数の時刻 @optional
+ * @description シートの列定義
+ * @property headers - ヘッダー行の値
+ * @property columnRange - 列の範囲(例: "A:B", "A:G")
+ * @property toRow - レコードをスプレッドシートの行に変換
+ * @property getKey - レコードのキー(upsert用の検索値)を返す
  */
-export interface DailyAverageSheetRecord {
-	timestamp: string;
-	playerCount: number;
-	sampleCount: number;
-	maxPlayerCount?: number | undefined;
-	maxPlayerTimestamp?: string | undefined;
-	minPlayerCount?: number | undefined;
-	minPlayerTimestamp?: string | undefined;
+export interface SheetColumnDef<T> {
+	headers: string[];
+	columnRange: string;
+	toRow: (record: T) => unknown[];
+	getKey: (record: T) => string;
 }
 
 /**
- * @description Google Sheetsサービスの公開インターフェース
+ * @description Google Sheetsアクセサの公開インターフェース
  */
-export interface GoogleSheetsService {
-	appendRecord(record: PlayerDataRecord): Promise<void>;
-	appendDailyAverageRecord(record: DailyAverageSheetRecord): Promise<void>;
-	batchAppendRecords(records: PlayerDataRecord[]): Promise<void>;
-	batchAppendDailyAverageRecords(
-		records: DailyAverageSheetRecord[],
-	): Promise<void>;
-	replaceAllRecords(records: PlayerDataRecord[]): Promise<void>;
-	replaceAllDailyAverageRecords(
-		records: DailyAverageSheetRecord[],
-	): Promise<void>;
+export interface SheetAccessor<T> {
+	append(record: T): Promise<void>;
+	batchAppend(records: T[]): Promise<void>;
+	replaceAll(records: T[]): Promise<void>;
 }
 
 /**
- * @description Google Sheetsサービスを生成
+ * @description 認証済みのGoogle Sheets APIクライアントを生成
+ * @param keyPath - サービスアカウントキーファイルパス
+ * @returns Sheets APIクライアント
+ */
+async function createSheetsClient(keyPath: string): Promise<sheets_v4.Sheets> {
+	const keyFile = await fs.readFile(keyPath, "utf8");
+	const credentials = googleServiceAccountSchema.parse(JSON.parse(keyFile));
+
+	const auth = new JWT({
+		email: credentials.client_email,
+		key: credentials.private_key,
+		scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+	});
+
+	return google.sheets({ version: "v4", auth });
+}
+
+/**
+ * @description 汎用Google Sheetsアクセサを生成
  * @param spreadsheetId - スプレッドシートID
  * @param sheetName - シート名
- * @param serviceAccountKeyPath - サービスアカウントキーファイルパス
- * @returns Google Sheets操作関数を持つオブジェクト
+ * @param keyPath - サービスアカウントキーファイルパス
+ * @param columnDef - 列定義
+ * @returns シート操作関数を持つオブジェクト
  */
-export function createGoogleSheetsService(
+export function createSheetAccessor<T>(
 	spreadsheetId: string,
 	sheetName: string,
-	serviceAccountKeyPath: string,
-): GoogleSheetsService {
-	let sheets: sheets_v4.Sheets;
+	keyPath: string,
+	columnDef: SheetColumnDef<T>,
+): SheetAccessor<T> {
 	let lastRequestTime = 0;
 	const minRequestInterval = 100;
 	let headerVerified = false;
-	let dailyAverageHeaderVerified = false;
+
+	// 認証を遅延初期化(Promise をキャッシュして競合状態を防止)
+	const sheetsPromise = createSheetsClient(keyPath);
 
 	/**
-	 * @description Google Sheets API認証を初期化
-	 * @param keyPath - サービスアカウントキーファイルパス
+	 * @description 認証済みクライアントを取得
 	 */
-	async function initializeAuth(keyPath: string): Promise<void> {
-		try {
-			const keyFile = await fs.readFile(keyPath, "utf8");
-			const credentials = googleServiceAccountSchema.parse(JSON.parse(keyFile));
-
-			const auth = new JWT({
-				email: credentials.client_email,
-				key: credentials.private_key,
-				scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-			});
-
-			sheets = google.sheets({ version: "v4", auth });
-		} catch (error) {
-			throw new Error(
-				`Failed to initialize Google Sheets authentication: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		}
+	async function getSheets(): Promise<sheets_v4.Sheets> {
+		return await sheetsPromise;
 	}
 
 	/**
 	 * @description レート制限付きでAPIリクエストを実行(100ms間隔)
 	 * @param requestFn - 実行するリクエスト関数
 	 */
-	async function rateLimitedRequest<T>(
-		requestFn: () => Promise<T>,
-	): Promise<T> {
+	async function rateLimitedRequest<R>(
+		requestFn: () => Promise<R>,
+	): Promise<R> {
 		const now = Date.now();
 		const timeSinceLastRequest = now - lastRequestTime;
 
@@ -105,19 +96,12 @@ export function createGoogleSheetsService(
 	 * @description シートを新規作成
 	 */
 	async function createSheet(): Promise<void> {
+		const sheets = await getSheets();
 		try {
 			await sheets.spreadsheets.batchUpdate({
 				spreadsheetId,
 				requestBody: {
-					requests: [
-						{
-							addSheet: {
-								properties: {
-									title: sheetName,
-								},
-							},
-						},
-					],
+					requests: [{ addSheet: { properties: { title: sheetName } } }],
 				},
 			});
 		} catch (error) {
@@ -130,30 +114,29 @@ export function createGoogleSheetsService(
 	}
 
 	/**
-	 * @description プレイヤーデータのヘッダー行を確保
+	 * @description ヘッダー行を確保
 	 */
-	async function ensureHeaderExists(): Promise<void> {
+	async function ensureHeader(): Promise<void> {
 		if (headerVerified) return;
+		const sheets = await getSheets();
+		const { columnRange, headers } = columnDef;
+		const lastCol = columnRange.split(":")[1];
+		const headerRange = `${sheetName}!A1:${lastCol}1`;
+
 		try {
 			const response = await sheets.spreadsheets.values.get({
 				spreadsheetId,
-				range: `${sheetName}!A1:B1`,
+				range: headerRange,
 			});
 
 			const values = response.data.values;
 			const firstCell = values?.[0]?.[0];
-			if (
-				!values ||
-				values.length === 0 ||
-				(firstCell !== "timestamp" && firstCell !== "timestamp (UTC)")
-			) {
+			if (!values || values.length === 0 || firstCell !== headers[0]) {
 				await sheets.spreadsheets.values.update({
 					spreadsheetId,
-					range: `${sheetName}!A1:B1`,
+					range: headerRange,
 					valueInputOption: "RAW",
-					requestBody: {
-						values: [["timestamp (UTC)", "player_count"]],
-					},
+					requestBody: { values: [headers] },
 				});
 			}
 			headerVerified = true;
@@ -163,7 +146,7 @@ export function createGoogleSheetsService(
 				error.message.includes("Unable to parse range")
 			) {
 				await createSheet();
-				await ensureHeaderExists();
+				await ensureHeader();
 			} else {
 				throw error;
 			}
@@ -171,64 +154,12 @@ export function createGoogleSheetsService(
 	}
 
 	/**
-	 * @description 日次平均データのヘッダー行を確保
-	 */
-	async function ensureDailyAverageHeaderExists(): Promise<void> {
-		if (dailyAverageHeaderVerified) return;
-		try {
-			const response = await sheets.spreadsheets.values.get({
-				spreadsheetId,
-				range: `${sheetName}!A1:G1`,
-			});
-
-			const values = response.data.values;
-			const firstCell = values?.[0]?.[0];
-			if (
-				!values ||
-				values.length === 0 ||
-				(firstCell !== "date" && firstCell !== "date (UTC)")
-			) {
-				await sheets.spreadsheets.values.update({
-					spreadsheetId,
-					range: `${sheetName}!A1:G1`,
-					valueInputOption: "RAW",
-					requestBody: {
-						values: [
-							[
-								"date (UTC)",
-								"average_player_count",
-								"sample_count",
-								"max_player_count",
-								"max_timestamp (UTC)",
-								"min_player_count",
-								"min_timestamp (UTC)",
-							],
-						],
-					},
-				});
-			}
-			dailyAverageHeaderVerified = true;
-		} catch (error) {
-			if (
-				error instanceof Error &&
-				error.message.includes("Unable to parse range")
-			) {
-				await createSheet();
-				await ensureDailyAverageHeaderExists();
-			} else {
-				throw error;
-			}
-		}
-	}
-
-	/**
-	 * @description タイムスタンプでレコード行を検索
-	 * @param timestamp - 検索するタイムスタンプ
+	 * @description キーでレコード行を検索
+	 * @param key - 検索するキー値
 	 * @returns 行番号(1始まり)またはnull
 	 */
-	async function findRecordByTimestamp(
-		timestamp: string,
-	): Promise<number | null> {
+	async function findRowByKey(key: string): Promise<number | null> {
+		const sheets = await getSheets();
 		try {
 			const response = await sheets.spreadsheets.values.get({
 				spreadsheetId,
@@ -236,17 +167,11 @@ export function createGoogleSheetsService(
 			});
 
 			const values = response.data.values;
-			if (!values || values.length <= 1) {
-				return null;
-			}
+			if (!values || values.length <= 1) return null;
 
 			for (let i = 1; i < values.length; i++) {
-				const row = values[i];
-				if (row && row[0] === timestamp) {
-					return i + 1;
-				}
+				if (values[i]?.[0] === key) return i + 1;
 			}
-
 			return null;
 		} catch (error) {
 			if (
@@ -260,61 +185,26 @@ export function createGoogleSheetsService(
 	}
 
 	/**
-	 * @description 日付で日次平均レコード行を検索
-	 * @param date - 検索する日付文字列
-	 * @returns 行番号(1始まり)またはnull
+	 * @description シートデータをクリア(ヘッダー除く)
 	 */
-	async function findDailyAverageRecordByDate(
-		date: string,
-	): Promise<number | null> {
-		try {
-			const response = await sheets.spreadsheets.values.get({
-				spreadsheetId,
-				range: `${sheetName}!A:A`,
-			});
-
-			const values = response.data.values;
-			if (!values || values.length <= 1) {
-				return null;
-			}
-
-			for (let i = 1; i < values.length; i++) {
-				const row = values[i];
-				if (row && row[0] === date) {
-					return i + 1;
-				}
-			}
-
-			return null;
-		} catch (error) {
-			if (
-				error instanceof Error &&
-				error.message.includes("Unable to parse range")
-			) {
-				return null;
-			}
-			throw error;
-		}
-	}
-
-	/**
-	 * @description プレイヤーデータのシートデータをクリア(ヘッダー除く)
-	 */
-	async function clearSheetData(): Promise<void> {
+	async function clearData(): Promise<void> {
+		const sheets = await getSheets();
+		const { columnRange } = columnDef;
 		try {
 			const response = await rateLimitedRequest(() =>
 				sheets.spreadsheets.values.get({
 					spreadsheetId,
-					range: `${sheetName}!A:B`,
+					range: `${sheetName}!${columnRange}`,
 				}),
 			);
 
 			const rowCount = response.data.values?.length ?? 0;
 			if (rowCount > 1) {
+				const lastCol = columnRange.split(":")[1];
 				await rateLimitedRequest(() =>
 					sheets.spreadsheets.values.clear({
 						spreadsheetId,
-						range: `${sheetName}!A2:B${rowCount}`,
+						range: `${sheetName}!A2:${lastCol}${rowCount}`,
 					}),
 				);
 			}
@@ -331,71 +221,37 @@ export function createGoogleSheetsService(
 	}
 
 	/**
-	 * @description 日次平均データのシートデータをクリア(ヘッダー除く)
+	 * @description レコードを追加または更新
+	 * @param record - 追加するレコード
 	 */
-	async function clearDailyAverageSheetData(): Promise<void> {
+	async function append(record: T): Promise<void> {
+		const sheets = await getSheets();
+		const { columnRange } = columnDef;
 		try {
-			const response = await rateLimitedRequest(() =>
-				sheets.spreadsheets.values.get({
-					spreadsheetId,
-					range: `${sheetName}!A:G`,
-				}),
-			);
+			await ensureHeader();
 
-			const rowCount = response.data.values?.length ?? 0;
-			if (rowCount > 1) {
-				await rateLimitedRequest(() =>
-					sheets.spreadsheets.values.clear({
-						spreadsheetId,
-						range: `${sheetName}!A2:G${rowCount}`,
-					}),
-				);
-			}
-		} catch (error) {
-			if (
-				!(
-					error instanceof Error &&
-					error.message.includes("Unable to parse range")
-				)
-			) {
-				throw error;
-			}
-		}
-	}
+			const key = columnDef.getKey(record);
+			const existingRow = await findRowByKey(key);
+			const values = [columnDef.toRow(record)];
+			const lastCol = columnRange.split(":")[1];
 
-	/**
-	 * @description プレイヤーデータレコードを追加または更新
-	 * @param record - プレイヤーデータレコード
-	 */
-	async function appendRecord(record: PlayerDataRecord): Promise<void> {
-		try {
-			await ensureHeaderExists();
-
-			const existingRowIndex = await findRecordByTimestamp(record.timestamp);
-
-			const values = [[record.timestamp, record.playerCount]];
-
-			if (existingRowIndex !== null) {
+			if (existingRow !== null) {
 				await rateLimitedRequest(() =>
 					sheets.spreadsheets.values.update({
 						spreadsheetId,
-						range: `${sheetName}!A${existingRowIndex}:B${existingRowIndex}`,
+						range: `${sheetName}!A${existingRow}:${lastCol}${existingRow}`,
 						valueInputOption: "RAW",
-						requestBody: {
-							values,
-						},
+						requestBody: { values },
 					}),
 				);
 			} else {
 				await rateLimitedRequest(() =>
 					sheets.spreadsheets.values.append({
 						spreadsheetId,
-						range: `${sheetName}!A:B`,
+						range: `${sheetName}!${columnRange}`,
 						valueInputOption: "RAW",
 						insertDataOption: "INSERT_ROWS",
-						requestBody: {
-							values,
-						},
+						requestBody: { values },
 					}),
 				);
 			}
@@ -407,88 +263,26 @@ export function createGoogleSheetsService(
 	}
 
 	/**
-	 * @description 日次平均レコードを追加または更新
-	 * @param record - 日次平均レコード
+	 * @description 複数レコードを一括追加
+	 * @param records - 追加するレコードの配列
 	 */
-	async function appendDailyAverageRecord(
-		record: DailyAverageSheetRecord,
-	): Promise<void> {
-		try {
-			await ensureDailyAverageHeaderExists();
-
-			const existingRowIndex = await findDailyAverageRecordByDate(
-				record.timestamp,
-			);
-
-			const values = [
-				[
-					record.timestamp,
-					record.playerCount,
-					record.sampleCount,
-					record.maxPlayerCount ?? "",
-					record.maxPlayerTimestamp ?? "",
-					record.minPlayerCount ?? "",
-					record.minPlayerTimestamp ?? "",
-				],
-			];
-
-			if (existingRowIndex !== null) {
-				await rateLimitedRequest(() =>
-					sheets.spreadsheets.values.update({
-						spreadsheetId,
-						range: `${sheetName}!A${existingRowIndex}:G${existingRowIndex}`,
-						valueInputOption: "RAW",
-						requestBody: {
-							values,
-						},
-					}),
-				);
-			} else {
-				await rateLimitedRequest(() =>
-					sheets.spreadsheets.values.append({
-						spreadsheetId,
-						range: `${sheetName}!A:G`,
-						valueInputOption: "RAW",
-						insertDataOption: "INSERT_ROWS",
-						requestBody: {
-							values,
-						},
-					}),
-				);
-			}
-		} catch (error) {
-			throw new Error(
-				`Failed to append/update daily average record to Google Sheets: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		}
-	}
-
-	/**
-	 * @description 複数のプレイヤーデータレコードを一括追加
-	 * @param records - プレイヤーデータレコードの配列
-	 */
-	async function batchAppendRecords(
-		records: PlayerDataRecord[],
-	): Promise<void> {
+	async function batchAppend(records: T[]): Promise<void> {
 		if (records.length === 0) return;
 
+		const sheets = await getSheets();
+		const { columnRange } = columnDef;
 		try {
-			await ensureHeaderExists();
+			await ensureHeader();
 
-			const values = records.map((record) => [
-				record.timestamp,
-				record.playerCount,
-			]);
+			const values = records.map((r) => columnDef.toRow(r));
 
 			await rateLimitedRequest(() =>
 				sheets.spreadsheets.values.append({
 					spreadsheetId,
-					range: `${sheetName}!A:B`,
+					range: `${sheetName}!${columnRange}`,
 					valueInputOption: "RAW",
 					insertDataOption: "INSERT_ROWS",
-					requestBody: {
-						values,
-					},
+					requestBody: { values },
 				}),
 			);
 		} catch (error) {
@@ -499,75 +293,29 @@ export function createGoogleSheetsService(
 	}
 
 	/**
-	 * @description 複数の日次平均レコードを一括追加
-	 * @param records - 日次平均レコードの配列
+	 * @description 全レコードを置換
+	 * @param records - 置換するレコードの配列
 	 */
-	async function batchAppendDailyAverageRecords(
-		records: DailyAverageSheetRecord[],
-	): Promise<void> {
-		if (records.length === 0) return;
-
+	async function replaceAll(records: T[]): Promise<void> {
+		const sheets = await getSheets();
+		const { columnRange, headers } = columnDef;
 		try {
-			await ensureDailyAverageHeaderExists();
-
-			const values = records.map((record) => [
-				record.timestamp,
-				record.playerCount,
-				record.sampleCount,
-				record.maxPlayerCount ?? "",
-				record.maxPlayerTimestamp ?? "",
-				record.minPlayerCount ?? "",
-				record.minPlayerTimestamp ?? "",
-			]);
-
-			await rateLimitedRequest(() =>
-				sheets.spreadsheets.values.append({
-					spreadsheetId,
-					range: `${sheetName}!A:G`,
-					valueInputOption: "RAW",
-					insertDataOption: "INSERT_ROWS",
-					requestBody: {
-						values,
-					},
-				}),
-			);
-		} catch (error) {
-			throw new Error(
-				`Failed to batch append daily average records to Google Sheets: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		}
-	}
-
-	/**
-	 * @description 全プレイヤーデータレコードを置換
-	 * @param records - プレイヤーデータレコードの配列
-	 */
-	async function replaceAllRecords(records: PlayerDataRecord[]): Promise<void> {
-		try {
-			await clearSheetData();
+			await clearData();
 
 			if (records.length === 0) return;
 
 			const sortedRecords = [...records].sort((a, b) =>
-				a.timestamp.localeCompare(b.timestamp),
+				columnDef.getKey(a).localeCompare(columnDef.getKey(b)),
 			);
 
-			const values = [
-				["timestamp (UTC)", "player_count"],
-				...sortedRecords.map((record) => [
-					record.timestamp,
-					record.playerCount,
-				]),
-			];
+			const values = [headers, ...sortedRecords.map((r) => columnDef.toRow(r))];
 
 			await rateLimitedRequest(() =>
 				sheets.spreadsheets.values.update({
 					spreadsheetId,
-					range: `${sheetName}!A:B`,
+					range: `${sheetName}!${columnRange}`,
 					valueInputOption: "RAW",
-					requestBody: {
-						values,
-					},
+					requestBody: { values },
 				}),
 			);
 		} catch (error) {
@@ -577,69 +325,52 @@ export function createGoogleSheetsService(
 		}
 	}
 
-	/**
-	 * @description 全日次平均レコードを置換
-	 * @param records - 日次平均レコードの配列
-	 */
-	async function replaceAllDailyAverageRecords(
-		records: DailyAverageSheetRecord[],
-	): Promise<void> {
-		try {
-			await clearDailyAverageSheetData();
-
-			if (records.length === 0) return;
-
-			const sortedRecords = [...records].sort((a, b) =>
-				a.timestamp.localeCompare(b.timestamp),
-			);
-
-			const values = [
-				[
-					"date (UTC)",
-					"average_player_count",
-					"sample_count",
-					"max_player_count",
-					"max_timestamp (UTC)",
-					"min_player_count",
-					"min_timestamp (UTC)",
-				],
-				...sortedRecords.map((record) => [
-					record.timestamp,
-					record.playerCount,
-					record.sampleCount,
-					record.maxPlayerCount ?? "",
-					record.maxPlayerTimestamp ?? "",
-					record.minPlayerCount ?? "",
-					record.minPlayerTimestamp ?? "",
-				]),
-			];
-
-			await rateLimitedRequest(() =>
-				sheets.spreadsheets.values.update({
-					spreadsheetId,
-					range: `${sheetName}!A:G`,
-					valueInputOption: "RAW",
-					requestBody: {
-						values,
-					},
-				}),
-			);
-		} catch (error) {
-			throw new Error(
-				`Failed to replace all daily average records in Google Sheets: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		}
-	}
-
-	// 認証を即時開始(現状のコンストラクタと同じ振る舞い)
-	initializeAuth(serviceAccountKeyPath);
-
-	return {
-		appendRecord,
-		appendDailyAverageRecord,
-		batchAppendRecords,
-		batchAppendDailyAverageRecords,
-		replaceAllRecords,
-		replaceAllDailyAverageRecords,
-	};
+	return { append, batchAppend, replaceAll };
 }
+
+/**
+ * @description プレイヤーデータ用の列定義
+ */
+export const playerDataColumnDef: SheetColumnDef<{
+	timestamp: string;
+	playerCount: number;
+}> = {
+	headers: ["timestamp (UTC)", "player_count"],
+	columnRange: "A:B",
+	toRow: (r) => [r.timestamp, r.playerCount],
+	getKey: (r) => r.timestamp,
+};
+
+/**
+ * @description 日次平均データ用の列定義
+ */
+export const dailyAverageColumnDef: SheetColumnDef<{
+	date: string;
+	averagePlayerCount: number;
+	sampleCount: number;
+	maxPlayerCount?: number | undefined;
+	maxPlayerTimestamp?: string | undefined;
+	minPlayerCount?: number | undefined;
+	minPlayerTimestamp?: string | undefined;
+}> = {
+	headers: [
+		"date (UTC)",
+		"average_player_count",
+		"sample_count",
+		"max_player_count",
+		"max_timestamp (UTC)",
+		"min_player_count",
+		"min_timestamp (UTC)",
+	],
+	columnRange: "A:G",
+	toRow: (r) => [
+		r.date,
+		r.averagePlayerCount,
+		r.sampleCount,
+		r.maxPlayerCount ?? "",
+		r.maxPlayerTimestamp ?? "",
+		r.minPlayerCount ?? "",
+		r.minPlayerTimestamp ?? "",
+	],
+	getKey: (r) => r.date,
+};
