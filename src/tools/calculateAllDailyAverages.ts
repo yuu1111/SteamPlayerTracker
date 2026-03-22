@@ -1,4 +1,4 @@
-import { config } from "../config";
+import { config } from "../schemas/config";
 import { createDailyAverageService } from "../services/dailyAverageService";
 import {
 	createSheetAccessor,

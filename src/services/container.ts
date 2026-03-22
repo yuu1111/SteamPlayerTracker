@@ -1,4 +1,4 @@
-import { config } from "../config";
+import { config } from "../schemas/config";
 import type { DailyAverageRow } from "../schemas/csv";
 import { createLogger } from "../utils/logger";
 import { createRetryHandler } from "../utils/retry";

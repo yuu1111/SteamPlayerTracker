@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import dayjs from "dayjs";
-import { config } from "../config";
+import { config } from "../schemas/config";
 import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csv-parser";
 import { createLogger } from "../utils/logger";
 

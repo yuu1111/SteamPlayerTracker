@@ -68,6 +68,16 @@ export type GoogleSheetsDisabledConfig = z.infer<
 >;
 export type GoogleSheetsConfig = z.infer<typeof googleSheetsSchema>;
 
+/**
+ * @description 環境変数からアプリケーション設定を生成
+ */
+export const config = parseConfig(process.env);
+
+/**
+ * @description 環境変数をパースして設定オブジェクトを生成
+ * @param env - 環境変数オブジェクト
+ * @returns パース済み設定
+ */
 export function parseConfig(env: NodeJS.ProcessEnv): Config {
 	const gsEnabled = env.GOOGLE_SHEETS_ENABLED === "true";
 
