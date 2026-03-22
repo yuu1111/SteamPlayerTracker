@@ -1,7 +1,4 @@
-import * as dotenv from "dotenv";
 import type { Config } from "../types/config";
-
-dotenv.config();
 
 function parseMinutes(minutesStr: string): number[] {
 	return minutesStr

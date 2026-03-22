@@ -186,25 +186,23 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 	];
 
 	if (hasExtendedData && maxData && minData) {
-		// biome-ignore lint/suspicious/noExplicitAny: Chart.js dataset type does not natively support null values in data arrays
 		datasets.push({
 			label: "Maximum Players",
-			data: maxData,
+			data: maxData as number[],
 			borderColor: "rgb(255, 99, 132)",
 			backgroundColor: "rgba(255, 99, 132, 0.2)",
 			tension: 0.1,
 			fill: false,
-		} as any);
+		});
 
-		// biome-ignore lint/suspicious/noExplicitAny: Chart.js dataset type does not natively support null values in data arrays
 		datasets.push({
 			label: "Minimum Players",
-			data: minData,
+			data: minData as number[],
 			borderColor: "rgb(54, 162, 235)",
 			backgroundColor: "rgba(54, 162, 235, 0.2)",
 			tension: 0.1,
 			fill: false,
-		} as any);
+		});
 	}
 
 	const chartJSNodeCanvas = new ChartJSNodeCanvas({
