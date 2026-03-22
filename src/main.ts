@@ -287,7 +287,4 @@ export class SteamPlayerTracker {
 	}
 }
 
-
 main();
-
-
