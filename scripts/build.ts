@@ -1,9 +1,6 @@
 import { Glob } from "bun";
 
-const entrypoints = [
-	"src/main.ts",
-	...new Glob("src/workers/*.ts").scanSync("."),
-];
+const entrypoints = ["src/main.ts", ...new Glob("src/jobs/*.ts").scanSync(".")];
 
 const result = await Bun.build({
 	entrypoints,

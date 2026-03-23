@@ -2,7 +2,7 @@
 	"name": "steam-player-tracker",
 	"version": "1.3.0",
 	"type": "module",
-	"description": "Track Steam game concurrent player counts and export to CSV/Google Sheets",
+	"description": "Track Steam game concurrent player counts with SQLite storage and optional Google Sheets sync",
 	"main": "dist/main",
 	"scripts": {
 		"build": "bun scripts/build.ts",
@@ -16,14 +16,14 @@
 		"release": "bun scripts/release.ts",
 		"release:minor": "bun scripts/release.ts minor",
 		"release:major": "bun scripts/release.ts major",
-		"calculate-daily-averages": "bun src/tools/calculateAllDailyAverages.ts",
-		"sync-google-sheets": "bun src/tools/syncGoogleSheets.ts",
+		"import-csv": "bun src/tools/importCsv.ts",
+		"export-csv": "bun src/tools/exportCsv.ts",
 		"generate-charts": "bun src/tools/generateCharts.ts"
 	},
 	"keywords": [
 		"steam",
 		"player-tracking",
-		"csv",
+		"sqlite",
 		"google-sheets"
 	],
 	"author": "yuu1111",
@@ -34,7 +34,6 @@
 		"dayjs": "^1.11.20",
 		"dev-clean": "^1.0.6",
 		"googleapis": "^171.4.0",
-		"winston": "^3.19.0",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {

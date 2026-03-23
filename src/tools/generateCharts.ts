@@ -2,9 +2,9 @@ import { promises as fs } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import dayjs from "dayjs";
-import { config } from "../config/config";
-import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csvParser";
-import { createLogger } from "../utils/logger";
+import { config } from "../config";
+import { createDatabase } from "../db";
+import { createLogger } from "../logger";
 
 const logger = createLogger("generate-charts");
 
@@ -30,57 +30,32 @@ const defaultConfig: ChartConfig = {
 };
 
 /**
- * @description CSVファイルの内容を読み込み
- * @param filePath - ファイルパス
- * @returns ファイル内容(存在しない場合はnull)
- */
-async function readCsvContent(filePath: string): Promise<string | null> {
-	try {
-		return await fs.readFile(filePath, "utf8");
-	} catch (error) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return null;
-		}
-		throw error;
-	}
-}
-
-/**
  * @description チャート出力先ディレクトリを算出
- * @returns chartsディレクトリのパス
  */
 function getChartsDir(): string {
-	return resolve(dirname(config.output.csvFilePath), "charts");
+	return resolve(dirname(config.storage.dbPath), "charts");
 }
 
 /**
  * @description プレイヤー数チャートを生成
  * @param days - 表示日数
  */
-async function generatePlayerCountChart(days: number = 7): Promise<void> {
+async function generatePlayerCountChart(days = 7): Promise<void> {
 	logger.info(`Generating player count chart for last ${days} days...`);
 
-	const content = await readCsvContent(config.output.csvFilePath);
-	if (!content) {
-		logger.warn("No player data available for chart generation");
-		return;
-	}
+	const db = createDatabase(config.storage.dbPath);
+	const from = dayjs().subtract(days, "day").format("YYYY-MM-DD 00:00:00");
+	const to = dayjs().format("YYYY-MM-DD 23:59:59");
+	const data = db.getPlayerDataByDateRange(from, to);
+	db.close();
 
-	const allRecords = parsePlayerDataCsv(content);
-	const cutoff = dayjs().subtract(days, "day");
-	const filteredData = allRecords.filter((r) =>
-		dayjs(r.timestamp).isAfter(cutoff),
-	);
-
-	if (filteredData.length === 0) {
+	if (data.length === 0) {
 		logger.warn(`No data available for the last ${days} days`);
 		return;
 	}
 
-	const labels = filteredData.map((r) =>
-		dayjs(r.timestamp).format("MM/DD HH:mm"),
-	);
-	const data = filteredData.map((r) => r.playerCount);
+	const labels = data.map((r) => dayjs(r.timestamp).format("MM/DD HH:mm"));
+	const values = data.map((r) => r.playerCount);
 
 	const chartJSNodeCanvas = new ChartJSNodeCanvas({
 		width: defaultConfig.width,
@@ -95,7 +70,7 @@ async function generatePlayerCountChart(days: number = 7): Promise<void> {
 			datasets: [
 				{
 					label: "Concurrent Players",
-					data,
+					data: values,
 					borderColor: "rgb(75, 192, 192)",
 					backgroundColor: "rgba(75, 192, 192, 0.2)",
 					tension: 0.1,
@@ -111,16 +86,10 @@ async function generatePlayerCountChart(days: number = 7): Promise<void> {
 					text: `Steam Concurrent Players - Last ${days} Days`,
 					font: { size: 20 },
 				},
-				legend: {
-					display: true,
-					position: "top" as const,
-				},
+				legend: { display: true, position: "top" as const },
 			},
 			scales: {
-				x: {
-					display: true,
-					title: { display: true, text: "Date/Time" },
-				},
+				x: { display: true, title: { display: true, text: "Date/Time" } },
 				y: {
 					display: true,
 					title: { display: true, text: "Player Count" },
@@ -143,35 +112,24 @@ async function generatePlayerCountChart(days: number = 7): Promise<void> {
  * @description 日次平均チャートを生成
  * @param days - 表示日数
  */
-async function generateDailyAverageChart(days: number = 30): Promise<void> {
+async function generateDailyAverageChart(days = 30): Promise<void> {
 	logger.info(`Generating daily average chart for last ${days} days...`);
 
-	const content = await readCsvContent(config.output.dailyAverageCsvFilePath);
-	if (!content) {
-		logger.warn("No daily average data available for chart generation");
-		return;
-	}
+	const db = createDatabase(config.storage.dbPath);
+	const from = dayjs().subtract(days, "day").format("YYYY-MM-DD");
+	const to = dayjs().format("YYYY-MM-DD");
+	const data = db.getDailyAverageRange(from, to);
+	db.close();
 
-	const allRecords = parseDailyAverageCsv(content);
-	const cutoff = dayjs().subtract(days, "day");
-	const filteredData = allRecords.filter((r) => dayjs(r.date).isAfter(cutoff));
-
-	if (filteredData.length === 0) {
+	if (data.length === 0) {
 		logger.warn(`No daily average data available for the last ${days} days`);
 		return;
 	}
 
-	const labels = filteredData.map((r) => dayjs(r.date).format("MM/DD"));
-	const averageData = filteredData.map((r) => r.averagePlayerCount);
-	const hasExtendedData = filteredData.some(
-		(r) => r.maxPlayerCount !== undefined,
-	);
-	const maxData = hasExtendedData
-		? filteredData.map((r) => r.maxPlayerCount ?? null)
-		: null;
-	const minData = hasExtendedData
-		? filteredData.map((r) => r.minPlayerCount ?? null)
-		: null;
+	const labels = data.map((r) => dayjs(r.date).format("MM/DD"));
+	const averageData = data.map((r) => r.averagePlayerCount);
+	const maxData = data.map((r) => r.maxPlayerCount);
+	const minData = data.map((r) => r.minPlayerCount);
 
 	const datasets = [
 		{
@@ -182,27 +140,23 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 			tension: 0.1,
 			fill: false,
 		},
-	];
-
-	if (hasExtendedData && maxData && minData) {
-		datasets.push({
+		{
 			label: "Maximum Players",
-			data: maxData as number[],
+			data: maxData,
 			borderColor: "rgb(255, 99, 132)",
 			backgroundColor: "rgba(255, 99, 132, 0.2)",
 			tension: 0.1,
 			fill: false,
-		});
-
-		datasets.push({
+		},
+		{
 			label: "Minimum Players",
-			data: minData as number[],
+			data: minData,
 			borderColor: "rgb(54, 162, 235)",
 			backgroundColor: "rgba(54, 162, 235, 0.2)",
 			tension: 0.1,
 			fill: false,
-		});
-	}
+		},
+	];
 
 	const chartJSNodeCanvas = new ChartJSNodeCanvas({
 		width: defaultConfig.width,
@@ -221,16 +175,10 @@ async function generateDailyAverageChart(days: number = 30): Promise<void> {
 					text: `Daily Player Statistics - Last ${days} Days`,
 					font: { size: 20 },
 				},
-				legend: {
-					display: true,
-					position: "top" as const,
-				},
+				legend: { display: true, position: "top" as const },
 			},
 			scales: {
-				x: {
-					display: true,
-					title: { display: true, text: "Date" },
-				},
+				x: { display: true, title: { display: true, text: "Date" } },
 				y: {
 					display: true,
 					title: { display: true, text: "Player Count" },
@@ -266,13 +214,12 @@ async function generateAllCharts(): Promise<void> {
 
 		logger.info("All charts generated successfully");
 		console.log("All charts have been generated successfully!");
-		console.log('Charts saved in the "charts" directory');
 
 		process.exit(0);
 	} catch (error) {
-		logger.error(
-			`Failed to generate charts: ${error instanceof Error ? error.message : "Unknown error"}`,
-		);
+		logger.error("Failed to generate charts", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		console.error("Failed to generate charts:", error);
 		process.exit(1);
 	}

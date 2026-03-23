@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/**
+ * @description コレクション分のカンマ区切り文字列を数値配列に変換
+ */
 const collectionMinutesSchema = z
 	.string()
 	.default("0,30")
@@ -14,6 +17,9 @@ const collectionMinutesSchema = z
 		return minutes;
 	});
 
+/**
+ * @description Google Sheets有効時の設定スキーマ
+ */
 const googleSheetsEnabledSchema = z.object({
 	enabled: z.literal(true),
 	spreadsheetId: z.string().min(1, "GOOGLE_SHEETS_SPREADSHEET_ID is required"),
@@ -22,31 +28,37 @@ const googleSheetsEnabledSchema = z.object({
 	serviceAccountKeyPath: z
 		.string()
 		.min(1, "GOOGLE_SERVICE_ACCOUNT_KEY_PATH is required"),
-	syncOnStartup: z.boolean().default(false),
 });
 
+/**
+ * @description Google Sheets無効時の設定スキーマ
+ */
 const googleSheetsDisabledSchema = z.object({
 	enabled: z.literal(false),
 });
 
+/**
+ * @description Google Sheets設定の判別共用体
+ */
 const googleSheetsSchema = z.discriminatedUnion("enabled", [
 	googleSheetsEnabledSchema,
 	googleSheetsDisabledSchema,
 ]);
 
+/**
+ * @description アプリケーション設定のZodスキーマ
+ */
 export const configSchema = z.object({
 	steam: z.object({
 		appId: z.coerce.number().int().positive(),
 	}),
-	output: z.object({
-		csvEnabled: z.boolean().default(true),
-		csvFilePath: z.string().default("steam_concurrent_players.csv"),
-		dailyAverageCsvEnabled: z.boolean().default(true),
-		dailyAverageCsvFilePath: z.string().default("steam_daily_averages.csv"),
+	storage: z.object({
+		dbPath: z.string().default("data/steam-tracker.db"),
 	}),
 	scheduling: z.object({
 		collectionMinutes: collectionMinutesSchema,
 		dailyAverageHour: z.coerce.number().int().min(0).max(23).default(0),
+		sheetsSyncMinutes: collectionMinutesSchema,
 	}),
 	retry: z.object({
 		maxRetries: z.coerce.number().int().min(0).default(3),
@@ -54,18 +66,25 @@ export const configSchema = z.object({
 	}),
 	logging: z.object({
 		level: z.enum(["debug", "info", "warn", "error"]).default("info"),
-		filePath: z.string().default("logs/steam-tracker.log"),
 	}),
 	googleSheets: googleSheetsSchema,
 });
 
+/**
+ * @description パース済み設定の型
+ */
 export type Config = z.infer<typeof configSchema>;
+
+/**
+ * @description Google Sheets有効時の設定型
+ */
 export type GoogleSheetsEnabledConfig = z.infer<
 	typeof googleSheetsEnabledSchema
 >;
-export type GoogleSheetsDisabledConfig = z.infer<
-	typeof googleSheetsDisabledSchema
->;
+
+/**
+ * @description Google Sheets設定の共用体型
+ */
 export type GoogleSheetsConfig = z.infer<typeof googleSheetsSchema>;
 
 /**
@@ -80,15 +99,13 @@ export function parseConfig(env: NodeJS.ProcessEnv): Config {
 		steam: {
 			appId: env.STEAM_APP_ID,
 		},
-		output: {
-			csvEnabled: env.CSV_OUTPUT_ENABLED !== "false",
-			csvFilePath: env.CSV_FILE_PATH || undefined,
-			dailyAverageCsvEnabled: env.DAILY_AVERAGE_CSV_ENABLED !== "false",
-			dailyAverageCsvFilePath: env.DAILY_AVERAGE_CSV_FILE_PATH || undefined,
+		storage: {
+			dbPath: env.DB_PATH || undefined,
 		},
 		scheduling: {
 			collectionMinutes: env.COLLECTION_MINUTES || undefined,
 			dailyAverageHour: env.DAILY_AVERAGE_HOUR || undefined,
+			sheetsSyncMinutes: env.SHEETS_SYNC_MINUTES || undefined,
 		},
 		retry: {
 			maxRetries: env.MAX_RETRIES || undefined,
@@ -96,7 +113,6 @@ export function parseConfig(env: NodeJS.ProcessEnv): Config {
 		},
 		logging: {
 			level: env.LOG_LEVEL || undefined,
-			filePath: env.LOG_FILE_PATH || undefined,
 		},
 		googleSheets: gsEnabled
 			? {
@@ -106,8 +122,12 @@ export function parseConfig(env: NodeJS.ProcessEnv): Config {
 					dailyAverageSheetName:
 						env.GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME || undefined,
 					serviceAccountKeyPath: env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH,
-					syncOnStartup: env.GOOGLE_SHEETS_SYNC_ON_STARTUP === "true",
 				}
 			: { enabled: false },
 	});
 }
+
+/**
+ * @description 環境変数からパース済みのアプリケーション設定
+ */
+export const config = parseConfig(process.env);

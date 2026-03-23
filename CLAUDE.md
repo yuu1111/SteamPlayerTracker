@@ -1,6 +1,6 @@
 # プロジェクト概要
 
-Steamゲームの同時接続プレイヤー数を定期取得し、CSVに記録、オプションでGoogle Sheetsに同期するBun製TypeScriptアプリケーション。
+Steamゲームの同時接続プレイヤー数を定期取得し、SQLiteに記録、オプションでGoogle Sheetsに同期するBun製TypeScriptアプリケーション。
 
 # 開発コマンド
 
@@ -31,9 +31,9 @@ bun run release:major        # メジャーバージョン
 ツールは`src/tools/`にあり、ビルドせずBunで直接実行する。
 
 ```bash
-bun run calculate-daily-averages   # 全日次平均を再計算
-bun run sync-google-sheets         # Google Sheetsへ同期
-bun run generate-charts            # チャート画像生成
+bun run import-csv           # 既存CSVデータをSQLiteにインポート
+bun run export-csv           # SQLiteデータをCSVにエクスポート
+bun run generate-charts      # チャート画像生成
 ```
 
 # アーキテクチャ
@@ -44,28 +44,32 @@ bun run generate-charts            # チャート画像生成
 - **ビルド**: Bun.build (ESM, コード分割有効) - `scripts/build.ts`
 - **Lint/Format**: Biome (`@yuu1111/biome-config`を継承)
 - **型チェック**: TypeScript 5.9 strict (`@yuu1111/tsconfig`を継承, `noEmit: true`)
-- **バリデーション**: Zod (設定、CSV、API応答すべて)
+- **バリデーション**: Zod (設定、API応答)
+- **ストレージ**: SQLite (`bun:sqlite`, 依存ゼロ)
 
 ## ソースコード構成
 
-- `src/main.ts` - エントリーポイント。SteamPlayerTrackerクラスがサービスを組み立て、Bun.cronでスケジュール登録
-- `src/config/config.ts` - 環境変数をZodスキーマでパースし設定オブジェクトを生成
-- `src/schemas/` - Zodバリデーションスキーマ (config, CSV, Steam API, Google認証情報)
-- `src/services/` - コアサービス群:
-  - `steamApi.ts` - Steam Web APIからプレイヤー数取得
-  - `csvWriter.ts` - CSVファイルへの書き込み
-  - `dailyAverageService.ts` - 日次平均の計算 (0値=API失敗として除外)
-  - `googleSheets.ts` / `queuedGoogleSheets.ts` - Google Sheets連携 (100msレート制限付きキュー)
-- `src/workers/` - Bun.cronワーカー (collect-data.ts, daily-average.ts)
-- `src/utils/` - ユーティリティ (logger, retry, csv-parser, カスタムWinstonトランスポート)
+- `src/main.ts` - エントリーポイント。依存を直接組み立て、inline Bun.cronでスケジュール登録
+- `src/config.ts` - 環境変数をZodスキーマでパースし設定オブジェクトを生成
+- `src/db.ts` - SQLiteデータベース初期化、マイグレーション、クエリヘルパー
+- `src/logger.ts` - 軽量構造化ロガー (JSON stdout出力)
+- `src/steamApi.ts` - Steam Web APIクライアント (ファクトリパターン)
+- `src/retry.ts` - 指数バックオフ付きリトライハンドラ
+- `src/googleSheets.ts` - 汎用Google Sheetsアクセサ (SheetAccessor<T>)
+- `src/schemas/` - Zodバリデーションスキーマ (Steam API, Google認証情報)
+- `src/jobs/` - cronジョブ (collectData, dailyAverage, syncSheets)
+- `src/tools/` - CLIツール (importCsv, exportCsv, generateCharts)
 - `scripts/` - ビルド・リリーススクリプト (TypeScript, Bunで直接実行)
 
 ## 設計パターン
 
 - **設定管理**: 全設定は`.env`経由。Zodの判別共用体(discriminated union)でGoogle Sheets有効/無効を型安全に分岐
+- **ストレージ**: SQLite (WALモード, prepared statements)。日次平均はSQLクエリで計算
+- **Google Sheets同期**: DB駆動 (`synced_at IS NULL` で未同期レコードを追跡)。プロセス再起動でもデータ損失なし
+- **依存注入**: サービスコンテナなし。main.tsで組み立てて関数引数で渡す
 - **リトライ**: 指数バックオフ (5倍乗数, 最大30秒)
-- **グレースフルシャットダウン**: シグナルリスナーでcronジョブを解除して終了
-- **ロギング**: Winston (JSONファイル出力 + カラーコンソール, 10MB回転, 7日自動削除)
+- **グレースフルシャットダウン**: シグナルリスナーでcronジョブ解除 + DB close
+- **ロギング**: 構造化JSON (stdout出力, ファイル出力はプロセスマネージャに委譲)
 
 ## CI/CD
 

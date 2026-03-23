@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import { JWT } from "google-auth-library";
 import type { sheets_v4 } from "googleapis";
 import { google } from "googleapis";
-import { googleServiceAccountSchema } from "../schemas/googleCredentials";
+import { googleServiceAccountSchema } from "./schemas/googleCredentials";
 
 /**
  * @description シートの列定義
@@ -63,7 +63,6 @@ export function createSheetAccessor<T>(
 	const minRequestInterval = 100;
 	let headerVerified = false;
 
-	// 認証を遅延初期化(Promise をキャッシュして競合状態を防止)
 	const sheetsPromise = createSheetsClient(keyPath);
 
 	/**

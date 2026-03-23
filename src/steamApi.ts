@@ -1,7 +1,7 @@
 import {
 	steamAppDetailsSchema,
 	steamPlayerCountResponseSchema,
-} from "../schemas/steamApi";
+} from "./schemas/steamApi";
 
 /**
  * @description Steam Web APIのベースURL

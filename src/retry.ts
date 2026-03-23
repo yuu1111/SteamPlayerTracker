@@ -13,11 +13,21 @@ interface RetryOptions {
 }
 
 /**
+ * @description リトライハンドラの公開インターフェース
+ */
+export interface RetryHandler {
+	executeWithRetry<T>(
+		operation: () => Promise<T>,
+		operationName?: string,
+	): Promise<T>;
+}
+
+/**
  * @description 指数バックオフ付きリトライハンドラを生成
  * @param options - リトライ設定
  * @returns リトライ実行関数を持つオブジェクト
  */
-export function createRetryHandler(options: RetryOptions) {
+export function createRetryHandler(options: RetryOptions): RetryHandler {
 	const { maxRetries, baseDelay } = options;
 
 	/**
@@ -44,7 +54,7 @@ export function createRetryHandler(options: RetryOptions) {
 	 */
 	async function executeWithRetry<T>(
 		operation: () => Promise<T>,
-		operationName: string = "operation",
+		operationName = "operation",
 	): Promise<T> {
 		let lastError = new Error("No attempts made");
 
@@ -74,8 +84,3 @@ export function createRetryHandler(options: RetryOptions) {
 
 	return { executeWithRetry };
 }
-
-/**
- * @description createRetryHandlerの返り値の型
- */
-export type RetryHandler = ReturnType<typeof createRetryHandler>;

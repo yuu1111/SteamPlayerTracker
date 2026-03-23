@@ -1,6 +1,10 @@
-import { getServices } from "./services/container";
-import { initLogMaintenance } from "./utils/logger";
-import { collectAndSaveData } from "./workers/collectData";
+import { config } from "./config";
+import { createDatabase } from "./db";
+import { collectData } from "./jobs/collectData";
+import { calculateAndSaveDailyAverages } from "./jobs/dailyAverage";
+import { createLogger } from "./logger";
+import { createRetryHandler } from "./retry";
+import { createSteamApiClient } from "./steamApi";
 
 /**
  * @description Windowsでウィンドウタイトルを設定
@@ -13,21 +17,16 @@ function setWindowTitle(title: string) {
 }
 
 /**
- * @description トラッカーを起動して全サービスを組み立て実行
+ * @description トラッカーを起動
  */
 async function startTracker(): Promise<void> {
-	const {
-		config,
-		logger,
-		steamApi,
-		retryHandler,
-		queuedGoogleSheets,
-		dailyAverageService,
-	} = getServices();
+	const logger = createLogger("main");
+	const db = createDatabase(config.storage.dbPath);
+	const steamApi = createSteamApiClient(config.steam.appId);
+	const retryHandler = createRetryHandler(config.retry);
 
-	const disposeLogMaintenance = initLogMaintenance();
-	let gameName: string | undefined;
 	const cronJobNames: string[] = [];
+	let gameName: string | undefined;
 
 	/**
 	 * @description ウィンドウタイトルをプレイヤー数で更新
@@ -37,7 +36,6 @@ async function startTracker(): Promise<void> {
 		if (process.platform !== "win32") return;
 
 		let title = "Steam Player Tracker";
-
 		if (gameName && playerCount !== undefined) {
 			title += ` - ${gameName}: ${playerCount.toLocaleString()} players`;
 		} else if (gameName) {
@@ -45,7 +43,6 @@ async function startTracker(): Promise<void> {
 		} else {
 			title += " - Running";
 		}
-
 		process.title = title;
 	}
 
@@ -56,21 +53,17 @@ async function startTracker(): Promise<void> {
 		for (const name of cronJobNames) {
 			try {
 				await Bun.cron.remove(name);
-				logger.info(`Removed cron job: ${name}`);
-			} catch (error) {
-				logger.warn(`Failed to remove cron job: ${name}`, {
-					error: error instanceof Error ? error.message : String(error),
-				});
+			} catch (_error) {
+				// ignore
 			}
 		}
-		cronJobNames.length = 0;
 	}
 
 	try {
 		logger.info("Steam Player Tracker starting...", {
 			appId: config.steam.appId,
+			dbPath: config.storage.dbPath,
 			scheduledMinutes: config.scheduling.collectionMinutes,
-			csvEnabled: config.output.csvEnabled,
 			googleSheetsEnabled: config.googleSheets.enabled || false,
 		});
 
@@ -80,9 +73,7 @@ async function startTracker(): Promise<void> {
 			() => steamApi.getCurrentPlayerCount(),
 			"Steam API test",
 		);
-		logger.info("Configuration validated successfully", {
-			testPlayerCount: testCount,
-		});
+		logger.info("Configuration validated", { testPlayerCount: testCount });
 
 		// ゲーム名取得
 		try {
@@ -92,48 +83,57 @@ async function startTracker(): Promise<void> {
 				logger.info(`Detected game: ${gameName}`);
 				updateWindowTitle();
 			}
-		} catch (error) {
-			logger.warn("Failed to get game name", {
-				error: error instanceof Error ? error.message : String(error),
-			});
+		} catch (_error) {
+			// ゲーム名取得失敗は非致命的
 		}
 
-		// 起動時データ収集(worker と同じコードパス)
-		logger.info("Collecting initial data on startup...");
-		await collectAndSaveData();
+		// 起動時データ収集
+		logger.info("Collecting initial data...");
+		await collectData();
 
 		// 欠落日次平均チェック
-		if (config.output.dailyAverageCsvEnabled && dailyAverageService) {
-			logger.info("Checking for missing daily averages...");
-			await dailyAverageService.checkAndCalculateMissingAverages();
-		}
+		await calculateAndSaveDailyAverages();
 
-		// Bun.cron 登録
-		const collectWorker = "./workers/collectData.ts";
-		const dailyWorker = "./workers/dailyAverage.ts";
-
+		// Bun.cron 登録: データ収集
+		const collectWorker = "./jobs/collectData.ts";
 		for (const minute of config.scheduling.collectionMinutes) {
-			const cronExpr = `${minute} * * * *`;
 			const name = `steam-tracker-collect-${minute}`;
-			await Bun.cron(collectWorker, cronExpr, name);
+			await Bun.cron(collectWorker, `${minute} * * * *`, name);
 			cronJobNames.push(name);
-			logger.info(`Registered cron job: ${name} (${cronExpr})`);
+			logger.info(`Registered cron: ${name} (${minute} * * * *)`);
 		}
 
-		if (config.output.dailyAverageCsvEnabled) {
-			const cronExpr = `0 ${config.scheduling.dailyAverageHour} * * *`;
+		// Bun.cron 登録: 日次平均
+		{
+			const dailyWorker = "./jobs/dailyAverage.ts";
 			const name = "steam-tracker-daily-avg";
-			await Bun.cron(dailyWorker, cronExpr, name);
+			await Bun.cron(
+				dailyWorker,
+				`0 ${config.scheduling.dailyAverageHour} * * *`,
+				name,
+			);
 			cronJobNames.push(name);
-			logger.info(`Registered cron job: ${name} (${cronExpr})`);
+			logger.info(
+				`Registered cron: ${name} (0 ${config.scheduling.dailyAverageHour} * * *)`,
+			);
+		}
+
+		// Bun.cron 登録: Google Sheets同期
+		if (config.googleSheets.enabled) {
+			const syncWorker = "./jobs/syncSheets.ts";
+			for (const minute of config.scheduling.sheetsSyncMinutes) {
+				const name = `steam-tracker-sync-sheets-${minute}`;
+				await Bun.cron(syncWorker, `${minute} * * * *`, name);
+				cronJobNames.push(name);
+				logger.info(`Registered cron: ${name} (${minute} * * * *)`);
+			}
 		}
 
 		// グレースフルシャットダウン
 		const shutdown = async (signal: string) => {
-			logger.info(`Received ${signal}. Shutting down gracefully...`);
-			disposeLogMaintenance();
-			queuedGoogleSheets?.dispose();
+			logger.info(`Received ${signal}. Shutting down...`);
 			await removeCronJobs();
+			db.close();
 			logger.info("Steam Player Tracker stopped");
 			process.exit(0);
 		};
@@ -144,28 +144,19 @@ async function startTracker(): Promise<void> {
 		logger.info("Steam Player Tracker started successfully");
 		console.log("Steam Player Tracker is running!");
 		console.log(`Tracking App ID: ${config.steam.appId}`);
+		console.log(`Database: ${config.storage.dbPath}`);
 		console.log(
 			`Collection schedule: every hour at minutes ${config.scheduling.collectionMinutes.join(", ")}`,
 		);
 		console.log(
-			`CSV output: ${config.output.csvEnabled ? config.output.csvFilePath : "disabled"}`,
-		);
-		console.log(
 			`Google Sheets: ${config.googleSheets.enabled ? "enabled" : "disabled"}`,
 		);
-		console.log(
-			`Daily averages: ${config.output.dailyAverageCsvEnabled ? `enabled (calculated at ${config.scheduling.dailyAverageHour}:00)` : "disabled"}`,
-		);
-		if (config.googleSheets.enabled) {
-			console.log(
-				"Manual sync: run 'bun run sync-google-sheets' to sync CSV data",
-			);
-		}
 		console.log("Press Ctrl+C to stop");
 	} catch (error) {
 		logger.error("Failed to start Steam Player Tracker", {
 			error: error instanceof Error ? error.message : String(error),
 		});
+		db.close();
 		throw error;
 	}
 }
