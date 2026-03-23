@@ -62,6 +62,7 @@ export function createSheetAccessor<T>(
 	let lastRequestTime = 0;
 	const minRequestInterval = 100;
 	let headerVerified = false;
+	const lastCol = columnDef.columnRange.split(":")[1];
 
 	const sheetsPromise = createSheetsClient(keyPath);
 
@@ -118,8 +119,7 @@ export function createSheetAccessor<T>(
 	async function ensureHeader(): Promise<void> {
 		if (headerVerified) return;
 		const sheets = await getSheets();
-		const { columnRange, headers } = columnDef;
-		const lastCol = columnRange.split(":")[1];
+		const { headers } = columnDef;
 		const headerRange = `${sheetName}!A1:${lastCol}1`;
 
 		try {
@@ -188,25 +188,13 @@ export function createSheetAccessor<T>(
 	 */
 	async function clearData(): Promise<void> {
 		const sheets = await getSheets();
-		const { columnRange } = columnDef;
 		try {
-			const response = await rateLimitedRequest(() =>
-				sheets.spreadsheets.values.get({
+			await rateLimitedRequest(() =>
+				sheets.spreadsheets.values.clear({
 					spreadsheetId,
-					range: `${sheetName}!${columnRange}`,
+					range: `${sheetName}!A2:${lastCol}`,
 				}),
 			);
-
-			const rowCount = response.data.values?.length ?? 0;
-			if (rowCount > 1) {
-				const lastCol = columnRange.split(":")[1];
-				await rateLimitedRequest(() =>
-					sheets.spreadsheets.values.clear({
-						spreadsheetId,
-						range: `${sheetName}!A2:${lastCol}${rowCount}`,
-					}),
-				);
-			}
 		} catch (error) {
 			if (
 				!(
@@ -225,14 +213,12 @@ export function createSheetAccessor<T>(
 	 */
 	async function append(record: T): Promise<void> {
 		const sheets = await getSheets();
-		const { columnRange } = columnDef;
 		try {
 			await ensureHeader();
 
 			const key = columnDef.getKey(record);
 			const existingRow = await findRowByKey(key);
 			const values = [columnDef.toRow(record)];
-			const lastCol = columnRange.split(":")[1];
 
 			if (existingRow !== null) {
 				await rateLimitedRequest(() =>
@@ -247,7 +233,7 @@ export function createSheetAccessor<T>(
 				await rateLimitedRequest(() =>
 					sheets.spreadsheets.values.append({
 						spreadsheetId,
-						range: `${sheetName}!${columnRange}`,
+						range: `${sheetName}!${columnDef.columnRange}`,
 						valueInputOption: "RAW",
 						insertDataOption: "INSERT_ROWS",
 						requestBody: { values },
@@ -269,7 +255,6 @@ export function createSheetAccessor<T>(
 		if (records.length === 0) return;
 
 		const sheets = await getSheets();
-		const { columnRange } = columnDef;
 		try {
 			await ensureHeader();
 
@@ -278,7 +263,7 @@ export function createSheetAccessor<T>(
 			await rateLimitedRequest(() =>
 				sheets.spreadsheets.values.append({
 					spreadsheetId,
-					range: `${sheetName}!${columnRange}`,
+					range: `${sheetName}!${columnDef.columnRange}`,
 					valueInputOption: "RAW",
 					insertDataOption: "INSERT_ROWS",
 					requestBody: { values },
@@ -297,7 +282,7 @@ export function createSheetAccessor<T>(
 	 */
 	async function replaceAll(records: T[]): Promise<void> {
 		const sheets = await getSheets();
-		const { columnRange, headers } = columnDef;
+		const { headers } = columnDef;
 		try {
 			await clearData();
 
@@ -312,7 +297,7 @@ export function createSheetAccessor<T>(
 			await rateLimitedRequest(() =>
 				sheets.spreadsheets.values.update({
 					spreadsheetId,
-					range: `${sheetName}!${columnRange}`,
+					range: `${sheetName}!${columnDef.columnRange}`,
 					valueInputOption: "RAW",
 					requestBody: { values },
 				}),

@@ -11,7 +11,7 @@ const db = createDatabase(config.storage.dbPath);
 /**
  * @description Steam APIから現在のプレイヤー数を取得
  */
-async function fetchPlayerCount(): Promise<number> {
+export async function fetchPlayerCount(): Promise<number> {
 	const url = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${config.steam.appId}`;
 
 	const response = await fetch(url, { signal: AbortSignal.timeout(10000) });

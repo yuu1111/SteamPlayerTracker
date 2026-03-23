@@ -44,14 +44,12 @@ export const dailyAverageColumnDef: SheetColumnDef<DailyAverageRow> = {
 };
 
 /**
- * @description 未同期レコードをGoogle Sheetsに同期
+ * @description Sheets同期に必要なリソースを生成
  */
-async function syncUnsyncedToSheets(): Promise<void> {
-	if (!config.googleSheets.enabled) return;
-
-	const db = createDatabase(config.storage.dbPath);
+function createSyncContext() {
 	const gs = config.googleSheets;
-
+	if (!gs.enabled) throw new Error("Google Sheets is not enabled");
+	const db = createDatabase(config.storage.dbPath);
 	const playerSheets = createSheetAccessor(
 		gs.spreadsheetId,
 		gs.sheetName,
@@ -64,17 +62,23 @@ async function syncUnsyncedToSheets(): Promise<void> {
 		gs.serviceAccountKeyPath,
 		dailyAverageColumnDef,
 	);
+	return { db, playerSheets, dailyAverageSheets };
+}
+
+/**
+ * @description 未同期レコードをGoogle Sheetsに同期
+ */
+async function syncUnsyncedToSheets(): Promise<void> {
+	if (!config.googleSheets.enabled) return;
+
+	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
 
 	try {
 		// プレイヤーデータの同期
 		const unsyncedPlayers = db.getUnsyncedPlayerData();
 		if (unsyncedPlayers.length > 0) {
 			logger.info(`Syncing ${unsyncedPlayers.length} player records to Sheets`);
-			const records = unsyncedPlayers.map(({ timestamp, playerCount }) => ({
-				timestamp,
-				playerCount,
-			}));
-			await playerSheets.batchAppend(records);
+			await playerSheets.batchAppend(unsyncedPlayers);
 			db.markPlayerDataSynced(unsyncedPlayers.map((r) => r.id));
 			logger.info(`Synced ${unsyncedPlayers.length} player records`);
 		}
@@ -113,21 +117,7 @@ export async function fullSyncToSheets(): Promise<void> {
 		return;
 	}
 
-	const db = createDatabase(config.storage.dbPath);
-	const gs = config.googleSheets;
-
-	const playerSheets = createSheetAccessor(
-		gs.spreadsheetId,
-		gs.sheetName,
-		gs.serviceAccountKeyPath,
-		playerDataColumnDef,
-	);
-	const dailyAverageSheets = createSheetAccessor(
-		gs.spreadsheetId,
-		gs.dailyAverageSheetName,
-		gs.serviceAccountKeyPath,
-		dailyAverageColumnDef,
-	);
+	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
 
 	try {
 		logger.info("Starting full sync to Google Sheets...");

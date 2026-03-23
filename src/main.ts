@@ -1,13 +1,10 @@
 import { config } from "./config";
 import { createDatabase } from "./db";
-import { collectData } from "./jobs/collectData";
+import { collectData, fetchPlayerCount } from "./jobs/collectData";
 import { calculateAndSaveDailyAverages } from "./jobs/dailyAverage";
 import { createLogger } from "./logger";
 import { retry } from "./retry";
-import {
-	steamAppDetailsSchema,
-	steamPlayerCountResponseSchema,
-} from "./schemas/steamApi";
+import { steamAppDetailsSchema } from "./schemas/steamApi";
 
 /**
  * @description トラッカーを起動
@@ -37,35 +34,34 @@ async function startTracker(): Promise<void> {
 			dbPath: config.storage.dbPath,
 		});
 
-		// 設定検証
-		const testCount = await retry(async () => {
-			const res = await fetch(
-				`https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${config.steam.appId}`,
-				{ signal: AbortSignal.timeout(10000) },
-			);
-			if (!res.ok) throw new Error(`Steam API error: ${res.status}`);
-			return steamPlayerCountResponseSchema.parse(await res.json()).response
-				.player_count;
-		});
-		logger.info("Configuration validated", { testPlayerCount: testCount });
-
-		// ゲーム名取得 - 失敗しても起動は継続
-		try {
-			const res = await fetch(
+		// 設定検証 + ゲーム名取得を並列実行
+		const [playerCountResult, gameNameResult] = await Promise.allSettled([
+			retry(fetchPlayerCount),
+			fetch(
 				`https://store.steampowered.com/api/appdetails?appids=${config.steam.appId}&filters=basic`,
 				{ signal: AbortSignal.timeout(10000) },
-			);
-			if (res.ok) {
+			).then(async (res) => {
+				if (!res.ok) return null;
 				const data = (await res.json()) as Record<string, unknown>;
 				const parsed = steamAppDetailsSchema.safeParse(
 					data[String(config.steam.appId)],
 				);
-				if (parsed.success) {
-					logger.info(`Detected game: ${parsed.data.data.name}`);
-				}
-			}
-		} catch (_error) {
-			logger.debug("Failed to fetch game name");
+				return parsed.success ? parsed.data.data.name : null;
+			}),
+		]);
+
+		if (playerCountResult.status === "rejected") {
+			throw playerCountResult.reason;
+		}
+		logger.info("Configuration validated", {
+			testPlayerCount: playerCountResult.value,
+		});
+
+		if (
+			gameNameResult.status === "fulfilled" &&
+			gameNameResult.value !== null
+		) {
+			logger.info(`Detected game: ${gameNameResult.value}`);
 		}
 
 		// 起動時データ収集
@@ -113,10 +109,10 @@ async function startTracker(): Promise<void> {
 		process.on("SIGINT", () => shutdown("SIGINT"));
 		process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-		console.log("Steam Player Tracker is running!");
-		console.log(`Tracking App ID: ${config.steam.appId}`);
-		console.log(`Database: ${config.storage.dbPath}`);
-		console.log("Press Ctrl+C to stop");
+		logger.info("Steam Player Tracker is running", {
+			appId: config.steam.appId,
+			dbPath: config.storage.dbPath,
+		});
 	} catch (error) {
 		logger.error("Failed to start", {
 			error: error instanceof Error ? error.message : String(error),

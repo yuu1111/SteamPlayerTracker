@@ -39,15 +39,19 @@ function getChartsDir(): string {
 /**
  * @description プレイヤー数チャートを生成
  * @param days - 表示日数
+ * @param db - データベース接続
+ * @param canvas - ChartJSNodeCanvasインスタンス
  */
-async function generatePlayerCountChart(days = 7): Promise<void> {
+async function generatePlayerCountChart(
+	days: number,
+	db: ReturnType<typeof createDatabase>,
+	canvas: ChartJSNodeCanvas,
+): Promise<void> {
 	logger.info(`Generating player count chart for last ${days} days...`);
 
-	const db = createDatabase(config.storage.dbPath);
 	const from = dayjs().subtract(days, "day").format("YYYY-MM-DD 00:00:00");
 	const to = dayjs().format("YYYY-MM-DD 23:59:59");
 	const data = db.getPlayerDataByDateRange(from, to);
-	db.close();
 
 	if (data.length === 0) {
 		logger.warn(`No data available for the last ${days} days`);
@@ -56,12 +60,6 @@ async function generatePlayerCountChart(days = 7): Promise<void> {
 
 	const labels = data.map((r) => dayjs(r.timestamp).format("MM/DD HH:mm"));
 	const values = data.map((r) => r.playerCount);
-
-	const chartJSNodeCanvas = new ChartJSNodeCanvas({
-		width: defaultConfig.width,
-		height: defaultConfig.height,
-		backgroundColour: defaultConfig.backgroundColor,
-	});
 
 	const configuration = {
 		type: "line" as const,
@@ -99,7 +97,7 @@ async function generatePlayerCountChart(days = 7): Promise<void> {
 		},
 	};
 
-	const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+	const imageBuffer = await canvas.renderToBuffer(configuration);
 	const chartsDir = getChartsDir();
 	const outputPath = resolve(chartsDir, `player_count_${days}days.png`);
 
@@ -111,15 +109,19 @@ async function generatePlayerCountChart(days = 7): Promise<void> {
 /**
  * @description 日次平均チャートを生成
  * @param days - 表示日数
+ * @param db - データベース接続
+ * @param canvas - ChartJSNodeCanvasインスタンス
  */
-async function generateDailyAverageChart(days = 30): Promise<void> {
+async function generateDailyAverageChart(
+	days: number,
+	db: ReturnType<typeof createDatabase>,
+	canvas: ChartJSNodeCanvas,
+): Promise<void> {
 	logger.info(`Generating daily average chart for last ${days} days...`);
 
-	const db = createDatabase(config.storage.dbPath);
 	const from = dayjs().subtract(days, "day").format("YYYY-MM-DD");
 	const to = dayjs().format("YYYY-MM-DD");
 	const data = db.getDailyAverageRange(from, to);
-	db.close();
 
 	if (data.length === 0) {
 		logger.warn(`No daily average data available for the last ${days} days`);
@@ -158,12 +160,6 @@ async function generateDailyAverageChart(days = 30): Promise<void> {
 		},
 	];
 
-	const chartJSNodeCanvas = new ChartJSNodeCanvas({
-		width: defaultConfig.width,
-		height: defaultConfig.height,
-		backgroundColour: defaultConfig.backgroundColor,
-	});
-
 	const configuration = {
 		type: "line" as const,
 		data: { labels, datasets },
@@ -188,7 +184,7 @@ async function generateDailyAverageChart(days = 30): Promise<void> {
 		},
 	};
 
-	const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+	const imageBuffer = await canvas.renderToBuffer(configuration);
 	const chartsDir = getChartsDir();
 	const outputPath = resolve(chartsDir, `daily_average_${days}days.png`);
 
@@ -198,30 +194,61 @@ async function generateDailyAverageChart(days = 30): Promise<void> {
 }
 
 /**
- * @description 全チャートを生成
+ * @description DB接続とCanvasを共有して全チャートを生成
  */
 async function generateAllCharts(): Promise<void> {
+	const db = createDatabase(config.storage.dbPath);
+	const canvas = new ChartJSNodeCanvas({
+		width: defaultConfig.width,
+		height: defaultConfig.height,
+		backgroundColour: defaultConfig.backgroundColor,
+	});
+
 	try {
 		logger.info("Starting chart generation...");
 
-		await generatePlayerCountChart(1);
-		await generatePlayerCountChart(7);
-		await generatePlayerCountChart(30);
+		await generatePlayerCountChart(1, db, canvas);
+		await generatePlayerCountChart(7, db, canvas);
+		await generatePlayerCountChart(30, db, canvas);
 
-		await generateDailyAverageChart(7);
-		await generateDailyAverageChart(30);
-		await generateDailyAverageChart(60);
+		await generateDailyAverageChart(7, db, canvas);
+		await generateDailyAverageChart(30, db, canvas);
+		await generateDailyAverageChart(60, db, canvas);
 
 		logger.info("All charts generated successfully");
-		console.log("All charts have been generated successfully!");
-
 		process.exit(0);
 	} catch (error) {
 		logger.error("Failed to generate charts", {
 			error: error instanceof Error ? error.message : String(error),
 		});
-		console.error("Failed to generate charts:", error);
 		process.exit(1);
+	} finally {
+		db.close();
+	}
+}
+
+/**
+ * @description 単一チャートCLI用のDB接続とCanvas生成
+ */
+async function runSingleChart(
+	fn: (
+		days: number,
+		db: ReturnType<typeof createDatabase>,
+		canvas: ChartJSNodeCanvas,
+	) => Promise<void>,
+	days: number,
+): Promise<void> {
+	const db = createDatabase(config.storage.dbPath);
+	const canvas = new ChartJSNodeCanvas({
+		width: defaultConfig.width,
+		height: defaultConfig.height,
+		backgroundColour: defaultConfig.backgroundColor,
+	});
+	try {
+		await fn(days, db, canvas);
+		process.exit(0);
+	} finally {
+		db.close();
 	}
 }
 
@@ -231,10 +258,10 @@ const days = args[1] ? Number.parseInt(args[1], 10) : undefined;
 
 switch (command) {
 	case "player-count":
-		generatePlayerCountChart(days || 7).then(() => process.exit(0));
+		runSingleChart(generatePlayerCountChart, days || 7);
 		break;
 	case "daily-average":
-		generateDailyAverageChart(days || 30).then(() => process.exit(0));
+		runSingleChart(generateDailyAverageChart, days || 30);
 		break;
 	default:
 		generateAllCharts();
