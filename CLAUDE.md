@@ -53,7 +53,6 @@ bun run generate-charts      # チャート画像生成
 - `src/config.ts` - 環境変数をZodスキーマでパースし設定オブジェクトを生成
 - `src/db.ts` - SQLiteデータベース初期化、マイグレーション、クエリヘルパー
 - `src/logger.ts` - 軽量構造化ロガー (JSON stdout出力)
-- `src/steamApi.ts` - Steam Web APIクライアント (ファクトリパターン)
 - `src/retry.ts` - 指数バックオフ付きリトライハンドラ
 - `src/googleSheets.ts` - 汎用Google Sheetsアクセサ (SheetAccessor<T>)
 - `src/schemas/` - Zodバリデーションスキーマ (Steam API, Google認証情報)

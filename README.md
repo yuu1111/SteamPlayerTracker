@@ -2,16 +2,16 @@
 
 [English](README.md) | [日本語](README-JP.md)
 
-A Bun-based TypeScript application that periodically fetches concurrent player counts for Steam games via the Steam Web API, records data to CSV, and optionally syncs to Google Sheets.
+A Bun-based TypeScript application that periodically fetches concurrent player counts for Steam games via the Steam Web API, records data to SQLite, and optionally syncs to Google Sheets.
 
 ## Features
 
 - Scheduled player count collection via `Bun.cron`
-- CSV recording with timestamps
+- SQLite storage (WAL mode) with automatic schema migration
 - Daily statistics: average, max/min player counts with timestamps
-- Optional Google Sheets sync with rate-limited queue (100ms)
+- Optional Google Sheets sync with rate limiting (100ms)
 - Automatic retry with exponential backoff
-- Zod validation for all external data (config, CSV, API responses)
+- Zod validation for all external data (config, API responses)
 - Graceful shutdown handling
 
 ## Requirements
@@ -50,9 +50,9 @@ bun run start        # Run built output
 ### Tools
 
 ```bash
-bun run calculate-daily-averages   # Recalculate all daily averages from CSV
-bun run sync-google-sheets         # Sync CSV data to Google Sheets
-bun run generate-charts            # Generate chart images
+bun run import-csv           # Import existing CSV data into SQLite
+bun run export-csv           # Export SQLite data to CSV
+bun run generate-charts      # Generate chart images
 ```
 
 ### Quality
@@ -70,11 +70,10 @@ All configuration is via `.env`. See [`.env.example`](.env.example) for the full
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `STEAM_APP_ID` | Steam App ID to track | (required) |
+| `DB_PATH` | SQLite database file path | `data/steam-tracker.db` |
 | `COLLECTION_MINUTES` | Minutes to collect data (comma-separated) | `0,30` |
 | `DAILY_AVERAGE_HOUR` | Hour to calculate daily averages (0-23) | `0` |
-| `CSV_OUTPUT_ENABLED` | Enable CSV output | `true` |
-| `DAILY_AVERAGE_CSV_ENABLED` | Enable daily average CSV | `true` |
-| `MAX_RETRIES` | Max retry attempts | `3` |
+| `SHEETS_SYNC_MINUTES` | Minutes to sync to Google Sheets (comma-separated) | `5,35` |
 | `LOG_LEVEL` | Log level (debug/info/warn/error) | `info` |
 | `GOOGLE_SHEETS_ENABLED` | Enable Google Sheets integration | `false` |
 
@@ -92,22 +91,29 @@ GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id
 GOOGLE_SERVICE_ACCOUNT_KEY_PATH=path/to/key.json
 ```
 
-## CSV Format
+## Data Storage
 
-**Player count data** (`steam_concurrent_players.csv`):
+Data is stored in SQLite (`data/steam-tracker.db` by default).
 
-```csv
-timestamp,player_count
-2024-06-23 10:00:00,12345
-2024-06-23 10:30:00,13456
-```
+**Player count table** (`player_data`):
 
-**Daily averages** (`steam_daily_averages.csv`):
+| Column | Type | Description |
+|--------|------|-------------|
+| `timestamp` | TEXT | UTC timestamp (YYYY-MM-DD HH:mm:ss) |
+| `player_count` | INTEGER | Concurrent player count |
+| `synced_at` | TEXT | Google Sheets sync timestamp (NULL if unsynced) |
 
-```csv
-date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestamp
-2024-06-22,12890,48,15420,2024-06-22 18:30:00,8450,2024-06-22 05:00:00
-```
+**Daily averages table** (`daily_averages`):
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `date` | TEXT (PK) | Date (YYYY-MM-DD) |
+| `average_player_count` | INTEGER | Average player count |
+| `sample_count` | INTEGER | Number of samples |
+| `max_player_count` | INTEGER | Maximum player count |
+| `max_timestamp` | TEXT | Timestamp of max count |
+| `min_player_count` | INTEGER | Minimum player count |
+| `min_timestamp` | TEXT | Timestamp of min count |
 
 Records with 0 player count are excluded from averages (treated as API failures).
 
@@ -115,26 +121,21 @@ Records with 0 player count are excluded from averages (treated as API failures)
 
 ```
 src/
-├── main.ts                    # Entry point, Bun.cron registration
-├── config/config.ts           # Env parsing with Zod
-├── schemas/                   # Zod schemas (config, CSV, Steam API, Google credentials)
-├── services/
-│   ├── steamApi.ts            # Steam Web API client
-│   ├── csvWriter.ts           # CSV file writer
-│   ├── dailyAverageService.ts # Daily average calculation
-│   ├── googleSheets.ts        # Google Sheets API service
-│   └── queuedGoogleSheets.ts  # Rate-limited Sheets queue
-├── workers/
-│   ├── collect-data.ts        # Scheduled data collection
-│   └── daily-average.ts       # Scheduled daily average calculation
-├── tools/                     # CLI tools (run directly with Bun)
-└── utils/                     # Logger, retry, CSV parser
+├── main.ts              # Entry point, Bun.cron registration
+├── config.ts            # Env parsing with Zod discriminated union
+├── db.ts                # SQLite initialization, migrations, query helpers
+├── logger.ts            # Structured JSON logger (stdout)
+├── retry.ts             # Exponential backoff retry handler
+├── googleSheets.ts      # Generic Google Sheets accessor (SheetAccessor<T>)
+├── schemas/             # Zod schemas (Steam API, Google credentials)
+├── jobs/                # Cron jobs (collectData, dailyAverage, syncSheets)
+└── tools/               # CLI tools (importCsv, exportCsv, generateCharts)
 scripts/
-├── build.ts                   # Bun.build script
-├── release.ts                 # Version bump, changelog, git tag
-├── setup.ps1                  # Setup (PowerShell)
-├── start.ps1                  # Start (PowerShell)
-└── sync-google-sheets.ps1     # Google Sheets sync (PowerShell)
+├── build.ts             # Bun.build script
+├── release.ts           # Version bump, changelog, git tag
+├── setup.ps1            # Setup (PowerShell)
+├── start.ps1            # Start (PowerShell)
+└── sync-google-sheets.ps1  # Google Sheets sync (PowerShell)
 ```
 
 ## Release
