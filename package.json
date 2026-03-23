@@ -18,7 +18,8 @@
 		"release:major": "bun scripts/release.ts major",
 		"import-csv": "bun src/tools/importCsv.ts",
 		"export-csv": "bun src/tools/exportCsv.ts",
-		"generate-charts": "bun src/tools/generateCharts.ts"
+		"generate-charts": "bun src/tools/generateCharts.ts",
+		"test": "STEAM_APP_ID=730 DB_PATH=data/test.db bun test"
 	},
 	"keywords": [
 		"steam",

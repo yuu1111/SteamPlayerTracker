@@ -22,8 +22,9 @@ logs/
 service-account-key.json
 credentials.json
 
-# CSV output files
+# Data files
 *.csv
+data/
 
 # IDE/Editor files
 .vscode/
@@ -42,3 +43,6 @@ Thumbs.db
 gcp-key.json
 
 charts/*.png
+
+# Test coverage
+coverage/

@@ -12,9 +12,10 @@ bun run typecheck    # TypeScript型チェック (tsc --noEmit)
 bun run lint         # Biomeによるlintチェック
 bun run format       # Biomeによるフォーマット適用 (--write --unsafe)
 bun run start        # ビルド済みファイルを実行
+bun run test         # bun testで全テスト実行
 ```
 
-テストフレームワークは未導入。品質管理は`typecheck`と`lint`で行う。
+品質管理は`typecheck`、`lint`、`test`で行う。テストはソースと同階層に`*.test.ts`で配置。
 
 # リリース
 

@@ -62,7 +62,9 @@ export interface Database {
  * @param dbPath - データベースファイルパス
  */
 export function createDatabase(dbPath: string): Database {
-	mkdirSync(dirname(dbPath), { recursive: true });
+	if (dbPath !== ":memory:") {
+		mkdirSync(dirname(dbPath), { recursive: true });
+	}
 	const db = new SQLiteDatabase(dbPath);
 
 	db.exec("PRAGMA journal_mode = WAL");

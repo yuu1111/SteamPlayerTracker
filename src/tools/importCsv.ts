@@ -8,7 +8,7 @@ const logger = createLogger("import-csv");
  * @description CSVコンテンツからプレイヤーデータ行をパース
  * @param content - CSV文字列
  */
-function parsePlayerDataCsv(
+export function parsePlayerDataCsv(
 	content: string,
 ): { timestamp: string; playerCount: number }[] {
 	const lines = content.trim().split("\n");
@@ -33,7 +33,7 @@ function parsePlayerDataCsv(
  * @description CSVコンテンツから日次平均行をパース
  * @param content - CSV文字列
  */
-function parseDailyAverageCsv(content: string): {
+export function parseDailyAverageCsv(content: string): {
 	date: string;
 	averagePlayerCount: number;
 	sampleCount: number;
