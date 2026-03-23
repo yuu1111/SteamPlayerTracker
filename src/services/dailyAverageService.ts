@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import type { DailyAverageRow, PlayerDataRow } from "../schemas/csv";
-import { parsePlayerDataCsv } from "../utils/csv-parser";
+import { parsePlayerDataCsv } from "../utils/csvParser";
 import type { createLogger } from "../utils/logger";
 import { createCsvWriter } from "./csvWriter";
 import type { QueuedGoogleSheetsService } from "./queuedGoogleSheets";

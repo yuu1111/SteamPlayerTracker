@@ -1,30 +1,36 @@
-import { config } from "../schemas/config";
-import type { DailyAverageRow } from "../schemas/csv";
-import { createLogger } from "../utils/logger";
-import { createRetryHandler } from "../utils/retry";
-import { createCsvWriter } from "./csvWriter";
-import { createDailyAverageService } from "./dailyAverageService";
+import type winston from "winston";
+import { config } from "../config/config";
 import {
-	createSheetAccessor,
 	dailyAverageColumnDef,
 	playerDataColumnDef,
-	type SheetAccessor,
-} from "./googleSheets";
+} from "../schemas/columnDefs";
+import type { Config } from "../schemas/config";
+import type { DailyAverageRow } from "../schemas/csv";
+import { createLogger } from "../utils/logger";
+import type { RetryHandler } from "../utils/retry";
+import { createRetryHandler } from "../utils/retry";
+import type { CsvWriter } from "./csvWriter";
+import { createCsvWriter } from "./csvWriter";
+import type { DailyAverageService } from "./dailyAverageService";
+import { createDailyAverageService } from "./dailyAverageService";
+import { createSheetAccessor, type SheetAccessor } from "./googleSheets";
+import type { QueuedGoogleSheetsService } from "./queuedGoogleSheets";
 import { createQueuedGoogleSheetsService } from "./queuedGoogleSheets";
+import type { SteamApiClient } from "./steamApi";
+import { createSteamApiClient } from "./steamApi";
 
 /**
  * @description アプリケーション全体で共有されるサービス群の型
  */
 export interface Services {
-	config: typeof config;
-	logger: ReturnType<typeof createLogger>;
-	csvWriter: ReturnType<typeof createCsvWriter>;
-	retryHandler: ReturnType<typeof createRetryHandler>;
-	queuedGoogleSheets:
-		| ReturnType<typeof createQueuedGoogleSheetsService>
-		| undefined;
+	config: Config;
+	logger: winston.Logger;
+	steamApi: SteamApiClient;
+	csvWriter: CsvWriter;
+	retryHandler: RetryHandler;
+	queuedGoogleSheets: QueuedGoogleSheetsService | undefined;
 	dailyAverageGoogleSheets: SheetAccessor<DailyAverageRow> | undefined;
-	dailyAverageService: ReturnType<typeof createDailyAverageService> | undefined;
+	dailyAverageService: DailyAverageService | undefined;
 }
 
 let cached: Services;
@@ -37,15 +43,14 @@ export function getServices(): Services {
 	if (cached) return cached;
 
 	const logger = createLogger("SteamPlayerTracker");
+	const steamApi = createSteamApiClient(config.steam.appId);
 	const csvWriter = createCsvWriter(config.output.csvFilePath);
 	const retryHandler = createRetryHandler({
 		maxRetries: config.retry.maxRetries,
 		baseDelay: config.retry.baseDelay,
 	});
 
-	let queuedGoogleSheets:
-		| ReturnType<typeof createQueuedGoogleSheetsService>
-		| undefined;
+	let queuedGoogleSheets: QueuedGoogleSheetsService | undefined;
 	let dailyAverageGoogleSheets: SheetAccessor<DailyAverageRow> | undefined;
 
 	if (config.googleSheets.enabled) {
@@ -73,9 +78,7 @@ export function getServices(): Services {
 		);
 	}
 
-	let dailyAverageService:
-		| ReturnType<typeof createDailyAverageService>
-		| undefined;
+	let dailyAverageService: DailyAverageService | undefined;
 
 	if (config.output.dailyAverageCsvEnabled) {
 		dailyAverageService = createDailyAverageService(
@@ -89,6 +92,7 @@ export function getServices(): Services {
 	cached = {
 		config,
 		logger,
+		steamApi,
 		csvWriter,
 		retryHandler,
 		queuedGoogleSheets,

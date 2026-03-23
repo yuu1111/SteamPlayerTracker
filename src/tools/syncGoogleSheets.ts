@@ -1,10 +1,10 @@
-import { config } from "../schemas/config";
+import { config } from "../config/config";
 import {
-	createSheetAccessor,
 	dailyAverageColumnDef,
 	playerDataColumnDef,
-} from "../services/googleSheets";
-import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csv-parser";
+} from "../schemas/columnDefs";
+import { createSheetAccessor } from "../services/googleSheets";
+import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csvParser";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger("sync-google-sheets");

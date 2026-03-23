@@ -1,10 +1,8 @@
-import { config } from "../schemas/config";
+import { config } from "../config/config";
+import { dailyAverageColumnDef } from "../schemas/columnDefs";
 import { createDailyAverageService } from "../services/dailyAverageService";
-import {
-	createSheetAccessor,
-	dailyAverageColumnDef,
-} from "../services/googleSheets";
-import { parseDailyAverageCsv } from "../utils/csv-parser";
+import { createSheetAccessor } from "../services/googleSheets";
+import { parseDailyAverageCsv } from "../utils/csvParser";
 import { createLogger } from "../utils/logger";
 
 /**

@@ -1,20 +1,25 @@
 import type { CronController } from "bun";
 import type { PlayerDataRow } from "../schemas/csv";
 import { getServices } from "../services/container";
-import * as steamApi from "../services/steamApi";
 
 /**
  * @description プレイヤーデータを収集してCSV/Sheetsに保存
  */
 async function collectAndSaveData(): Promise<void> {
-	const { config, logger, csvWriter, retryHandler, queuedGoogleSheets } =
-		getServices();
+	const {
+		config,
+		logger,
+		steamApi,
+		csvWriter,
+		retryHandler,
+		queuedGoogleSheets,
+	} = getServices();
 
 	try {
 		logger.info("Starting data collection...");
 
 		const playerCount = await retryHandler.executeWithRetry(
-			() => steamApi.getCurrentPlayerCount(config.steam.appId),
+			() => steamApi.getCurrentPlayerCount(),
 			"Steam API data collection",
 		);
 

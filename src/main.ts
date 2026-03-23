@@ -1,6 +1,6 @@
 import { getServices } from "./services/container";
-import * as steamApi from "./services/steamApi";
-import { collectAndSaveData } from "./workers/collect-data";
+import { initLogMaintenance } from "./utils/logger";
+import { collectAndSaveData } from "./workers/collectData";
 
 /**
  * @description Windowsでウィンドウタイトルを設定
@@ -19,11 +19,13 @@ async function startTracker(): Promise<void> {
 	const {
 		config,
 		logger,
+		steamApi,
 		retryHandler,
 		queuedGoogleSheets,
 		dailyAverageService,
 	} = getServices();
 
+	const disposeLogMaintenance = initLogMaintenance();
 	let gameName: string | undefined;
 	const cronJobNames: string[] = [];
 
@@ -75,7 +77,7 @@ async function startTracker(): Promise<void> {
 		// 設定検証
 		logger.info("Validating configuration...");
 		const testCount = await retryHandler.executeWithRetry(
-			() => steamApi.getCurrentPlayerCount(config.steam.appId),
+			() => steamApi.getCurrentPlayerCount(),
 			"Steam API test",
 		);
 		logger.info("Configuration validated successfully", {
@@ -84,7 +86,7 @@ async function startTracker(): Promise<void> {
 
 		// ゲーム名取得
 		try {
-			const name = await steamApi.getGameName(config.steam.appId);
+			const name = await steamApi.getGameName();
 			if (name) {
 				gameName = name;
 				logger.info(`Detected game: ${gameName}`);
@@ -107,8 +109,8 @@ async function startTracker(): Promise<void> {
 		}
 
 		// Bun.cron 登録
-		const collectWorker = "./workers/collect-data.ts";
-		const dailyWorker = "./workers/daily-average.ts";
+		const collectWorker = "./workers/collectData.ts";
+		const dailyWorker = "./workers/dailyAverage.ts";
 
 		for (const minute of config.scheduling.collectionMinutes) {
 			const cronExpr = `${minute} * * * *`;
@@ -129,6 +131,7 @@ async function startTracker(): Promise<void> {
 		// グレースフルシャットダウン
 		const shutdown = async (signal: string) => {
 			logger.info(`Received ${signal}. Shutting down gracefully...`);
+			disposeLogMaintenance();
 			queuedGoogleSheets?.dispose();
 			await removeCronJobs();
 			logger.info("Steam Player Tracker stopped");

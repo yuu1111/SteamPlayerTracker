@@ -3,7 +3,7 @@ import {
 	cleanOldLogs,
 	SessionErrorFileTransport,
 	SessionFileTransport,
-} from "./session-file-transport";
+} from "./sessionFileTransport";
 
 const getLogLevel = (): string => {
 	const level = process.env.LOG_LEVEL;
@@ -87,23 +87,35 @@ export const logger = winston.createLogger({
 	],
 });
 
-try {
-	cleanOldLogs(7);
-} catch (error) {
-	console.error("Log cleanup error:", error);
+/**
+ * @description ログメンテナンス(古いログの削除)を開始
+ * @returns メンテナンスを停止するdispose関数
+ */
+export function initLogMaintenance(): () => void {
+	try {
+		cleanOldLogs(7);
+	} catch (error) {
+		console.error("Log cleanup error:", error);
+	}
+
+	const intervalId = setInterval(
+		() => {
+			try {
+				cleanOldLogs(7);
+			} catch (error) {
+				console.error("Periodic log cleanup error:", error);
+			}
+		},
+		24 * 60 * 60 * 1000,
+	);
+
+	return () => clearInterval(intervalId);
 }
 
-setInterval(
-	() => {
-		try {
-			cleanOldLogs(7);
-		} catch (error) {
-			console.error("Periodic log cleanup error:", error);
-		}
-	},
-	24 * 60 * 60 * 1000,
-);
-
+/**
+ * @description モジュール別の子ロガーを生成
+ * @param module - モジュール名
+ */
 export const createLogger = (module: string): winston.Logger => {
 	const currentLevel = getLogLevel();
 	if (logger.level !== currentLevel) {

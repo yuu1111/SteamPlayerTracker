@@ -2,8 +2,8 @@ import { promises as fs } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import dayjs from "dayjs";
-import { config } from "../schemas/config";
-import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csv-parser";
+import { config } from "../config/config";
+import { parseDailyAverageCsv, parsePlayerDataCsv } from "../utils/csvParser";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger("generate-charts");
