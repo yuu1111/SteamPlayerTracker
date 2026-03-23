@@ -3,84 +3,26 @@ import { createLogger } from "./logger";
 const logger = createLogger("retry");
 
 /**
- * @description リトライハンドラの設定
- * @property maxRetries - 最大リトライ回数
- * @property baseDelay - 基本遅延時間(ms)
+ * @description 指数バックオフ付きリトライ
+ * @param fn - 実行する非同期処理
+ * @param attempts - 最大試行回数 @default 4
+ * @param baseDelay - 基本遅延(ms) @default 1000
  */
-interface RetryOptions {
-	maxRetries: number;
-	baseDelay: number;
-}
-
-/**
- * @description リトライハンドラの公開インターフェース
- */
-export interface RetryHandler {
-	executeWithRetry<T>(
-		operation: () => Promise<T>,
-		operationName?: string,
-	): Promise<T>;
-}
-
-/**
- * @description 指数バックオフ付きリトライハンドラを生成
- * @param options - リトライ設定
- * @returns リトライ実行関数を持つオブジェクト
- */
-export function createRetryHandler(options: RetryOptions): RetryHandler {
-	const { maxRetries, baseDelay } = options;
-
-	/**
-	 * @description リトライ間隔を計算(5倍乗数, 最大30秒)
-	 * @param attempt - 現在の試行回数(0始まり)
-	 * @returns 遅延時間(ms)
-	 */
-	function calculateDelay(attempt: number): number {
-		return Math.min(baseDelay * 5 ** attempt, 30000);
-	}
-
-	/**
-	 * @description 指定時間待機
-	 * @param ms - 待機時間(ms)
-	 */
-	function sleep(ms: number): Promise<void> {
-		return new Promise((resolve) => setTimeout(resolve, ms));
-	}
-
-	/**
-	 * @description 非同期処理を指数バックオフ付きでリトライ実行
-	 * @param operation - 実行する非同期処理
-	 * @param operationName - ログ表示用の操作名
-	 */
-	async function executeWithRetry<T>(
-		operation: () => Promise<T>,
-		operationName = "operation",
-	): Promise<T> {
-		let lastError = new Error("No attempts made");
-
-		for (let attempt = 0; attempt <= maxRetries; attempt++) {
-			try {
-				return await operation();
-			} catch (error) {
-				lastError = error instanceof Error ? error : new Error(String(error));
-
-				if (attempt === maxRetries) {
-					throw new Error(
-						`${operationName} failed after ${maxRetries + 1} attempts. Last error: ${lastError.message}`,
-					);
-				}
-
-				const delay = calculateDelay(attempt);
-				logger.warn(
-					`${operationName} attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay}ms...`,
-				);
-
-				await sleep(delay);
-			}
+export async function retry<T>(
+	fn: () => Promise<T>,
+	{ attempts = 4, baseDelay = 1000 } = {},
+): Promise<T> {
+	for (let i = 0; i < attempts; i++) {
+		try {
+			return await fn();
+		} catch (error) {
+			if (i === attempts - 1) throw error;
+			const delay = Math.min(baseDelay * 5 ** i, 30000);
+			logger.warn(
+				`Attempt ${i + 1}/${attempts} failed: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`,
+			);
+			await new Promise((r) => setTimeout(r, delay));
 		}
-
-		throw lastError;
 	}
-
-	return { executeWithRetry };
+	throw new Error("unreachable");
 }

@@ -60,10 +60,6 @@ export const configSchema = z.object({
 		dailyAverageHour: z.coerce.number().int().min(0).max(23).default(0),
 		sheetsSyncMinutes: collectionMinutesSchema,
 	}),
-	retry: z.object({
-		maxRetries: z.coerce.number().int().min(0).default(3),
-		baseDelay: z.coerce.number().int().positive().default(1000),
-	}),
 	logging: z.object({
 		level: z.enum(["debug", "info", "warn", "error"]).default("info"),
 	}),
@@ -106,10 +102,6 @@ export function parseConfig(env: NodeJS.ProcessEnv): Config {
 			collectionMinutes: env.COLLECTION_MINUTES || undefined,
 			dailyAverageHour: env.DAILY_AVERAGE_HOUR || undefined,
 			sheetsSyncMinutes: env.SHEETS_SYNC_MINUTES || undefined,
-		},
-		retry: {
-			maxRetries: env.MAX_RETRIES || undefined,
-			baseDelay: env.RETRY_BASE_DELAY || undefined,
 		},
 		logging: {
 			level: env.LOG_LEVEL || undefined,
