@@ -245,8 +245,8 @@ export function createDatabase(dbPath: string): Database {
 	 * @param values - 更新対象の値配列
 	 */
 	function markSyncedByColumn(
-		table: string,
-		column: string,
+		table: "player_data" | "daily_averages",
+		column: "id" | "date",
 		values: (number | string)[],
 	): void {
 		if (values.length === 0) return;
