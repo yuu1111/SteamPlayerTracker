@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { Database } from "../../src/db";
+import { mockConfigModule } from "../mocks/config";
 import { sampleDailyAverageRow } from "../test-helpers";
 
-// createDatabaseのオリジナルを保持 (モック前にimport)
 const { createDatabase: realCreateDatabase } = await import("../../src/db");
 
 const mockBatchAppend = mock(() => Promise.resolve());
@@ -19,25 +19,7 @@ mock.module("../../src/googleSheets", () => ({
 
 let sharedDb: Database;
 
-mock.module("../../src/config", () => ({
-	config: {
-		steam: { appId: 730 },
-		storage: { dbPath: ":memory:" },
-		scheduling: {
-			collectionMinutes: [0, 30],
-			dailyAverageHour: 0,
-			sheetsSyncMinutes: [5, 35],
-		},
-		logging: { level: "info" },
-		googleSheets: {
-			enabled: true,
-			spreadsheetId: "test-spreadsheet",
-			sheetName: "PlayerData",
-			dailyAverageSheetName: "DailyAverages",
-			serviceAccountKeyPath: "/fake/key.json",
-		},
-	},
-}));
+mockConfigModule("../../src/config", true);
 
 const {
 	playerDataColumnDef,

@@ -1,47 +1,15 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { SheetColumnDef } from "../src/googleSheets";
+import { setupGoogleSheetsMocks } from "./mocks/googleSheets";
 
-const mockGet = mock(() =>
-	Promise.resolve({ data: { values: [["id", "value"]] } }),
-);
-const mockUpdate = mock(() => Promise.resolve());
-const mockAppend = mock(() => Promise.resolve());
-const mockClear = mock(() => Promise.resolve());
-const mockBatchUpdate = mock(() => Promise.resolve());
-
-mock.module("node:fs", () => ({
-	promises: {
-		readFile: mock(() =>
-			Promise.resolve(
-				JSON.stringify({
-					client_email: "test@test.iam.gserviceaccount.com",
-					private_key:
-						"-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----",
-				}),
-			),
-		),
-	},
-}));
-
-mock.module("google-auth-library", () => ({
-	JWT: class FakeJWT {},
-}));
-
-mock.module("googleapis", () => ({
-	google: {
-		sheets: () => ({
-			spreadsheets: {
-				values: {
-					get: mockGet,
-					update: mockUpdate,
-					append: mockAppend,
-					clear: mockClear,
-				},
-				batchUpdate: mockBatchUpdate,
-			},
-		}),
-	},
-}));
+const {
+	mockGet,
+	mockUpdate,
+	mockAppend,
+	mockClear,
+	mockBatchUpdate,
+	resetAll,
+} = setupGoogleSheetsMocks();
 
 /**
  * @description テスト用データ型
@@ -65,19 +33,7 @@ const { createSheetAccessor } = await import("../src/googleSheets");
 
 describe("createSheetAccessor", () => {
 	beforeEach(() => {
-		mockGet.mockReset();
-		mockUpdate.mockReset();
-		mockAppend.mockReset();
-		mockClear.mockReset();
-		mockBatchUpdate.mockReset();
-
-		mockGet.mockResolvedValue({
-			data: { values: [["id", "value"]] },
-		});
-		mockUpdate.mockResolvedValue(undefined);
-		mockAppend.mockResolvedValue(undefined);
-		mockClear.mockResolvedValue(undefined);
-		mockBatchUpdate.mockResolvedValue(undefined);
+		resetAll();
 	});
 
 	describe("append", () => {

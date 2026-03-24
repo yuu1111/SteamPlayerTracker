@@ -1,18 +1,7 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { mockConfigModule } from "../mocks/config";
 
-mock.module("../../src/config", () => ({
-	config: {
-		steam: { appId: 730 },
-		storage: { dbPath: ":memory:" },
-		scheduling: {
-			collectionMinutes: [0, 30],
-			dailyAverageHour: 0,
-			sheetsSyncMinutes: [5, 35],
-		},
-		logging: { level: "info" },
-		googleSheets: { enabled: false },
-	},
-}));
+mockConfigModule("../../src/config", false);
 
 const { createSheetAccessors } = await import("../../src/jobs/syncSheets");
 

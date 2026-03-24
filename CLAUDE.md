@@ -15,7 +15,7 @@ bun run start        # ビルド済みファイルを実行
 bun run test         # bun testで全テスト実行
 ```
 
-品質管理は`typecheck`、`lint`、`test`で行う。テストはソースと同階層に`*.test.ts`で配置。
+品質管理は`typecheck`、`lint`、`test`で行う。テストは`tests/`にsrc/のミラー構造で配置。
 
 # リリース
 
