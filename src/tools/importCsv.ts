@@ -151,8 +151,8 @@ async function main() {
 						db.upsertDailyAverage(record);
 					}
 				});
+				logger.info(`Imported ${avgRecords.length} daily average records`);
 			}
-			logger.info(`Imported ${avgRecords.length} daily average records`);
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
 				logger.warn(`Daily average CSV not found: ${avgCsvPath}`);

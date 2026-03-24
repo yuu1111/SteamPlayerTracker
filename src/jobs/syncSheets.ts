@@ -44,7 +44,12 @@ export const dailyAverageColumnDef: SheetColumnDef<DailyAverageRow> = {
 /**
  * @description Sheets同期用のアクセサを生成
  */
-function createSheetAccessors() {
+/**
+ * @description Sheets同期用のアクセサセット
+ */
+export type SheetAccessors = ReturnType<typeof createSheetAccessors>;
+
+export function createSheetAccessors() {
 	const gs = config.googleSheets;
 	if (!gs.enabled) throw new Error("Google Sheets is not enabled");
 	return {
@@ -67,7 +72,15 @@ function createSheetAccessors() {
  * @description 未同期レコードをGoogle Sheetsに同期
  * @param db - データベースインスタンス
  */
-export async function syncUnsyncedToSheets(db: Database): Promise<void> {
+/**
+ * @description 未同期レコードをGoogle Sheetsに同期
+ * @param db - データベースインスタンス
+ * @param accessors - Sheetsアクセサ
+ */
+export async function syncUnsyncedToSheets(
+	db: Database,
+	accessors: SheetAccessors,
+): Promise<void> {
 	if (!config.googleSheets.enabled) return;
 
 	const unsyncedPlayers = db.getUnsyncedPlayerData();
@@ -78,7 +91,7 @@ export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 		return;
 	}
 
-	const { playerSheets, dailyAverageSheets } = createSheetAccessors();
+	const { playerSheets, dailyAverageSheets } = accessors;
 
 	try {
 		if (unsyncedPlayers.length > 0) {
@@ -106,14 +119,18 @@ export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 /**
  * @description 全データをGoogle Sheetsに完全同期(replaceAll)
  * @param db - データベースインスタンス
+ * @param accessors - Sheetsアクセサ
  */
-export async function fullSyncToSheets(db: Database): Promise<void> {
+export async function fullSyncToSheets(
+	db: Database,
+	accessors: SheetAccessors,
+): Promise<void> {
 	if (!config.googleSheets.enabled) {
 		logger.error("Google Sheets is not enabled");
 		return;
 	}
 
-	const { playerSheets, dailyAverageSheets } = createSheetAccessors();
+	const { playerSheets, dailyAverageSheets } = accessors;
 
 	logger.info("Starting full sync to Google Sheets...");
 

@@ -358,15 +358,7 @@ export function createDatabase(dbPath: string): Database {
 	 * @param fn - トランザクション内で実行する関数
 	 */
 	function transaction<T>(fn: () => T): T {
-		db.run("BEGIN");
-		try {
-			const result = fn();
-			db.run("COMMIT");
-			return result;
-		} catch (error) {
-			db.run("ROLLBACK");
-			throw error;
-		}
+		return db.transaction(fn)();
 	}
 
 	/**

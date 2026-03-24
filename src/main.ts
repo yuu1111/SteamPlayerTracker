@@ -2,7 +2,7 @@ import { config } from "./config";
 import { createDatabase } from "./db";
 import { collectData, fetchPlayerCount } from "./jobs/collectData";
 import { calculateAndSaveDailyAverages } from "./jobs/dailyAverage";
-import { syncUnsyncedToSheets } from "./jobs/syncSheets";
+import { createSheetAccessors, syncUnsyncedToSheets } from "./jobs/syncSheets";
 import { createLogger } from "./logger";
 import { retry } from "./retry";
 import { steamAppDetailsSchema } from "./schemas/steamApi";
@@ -51,6 +51,10 @@ async function startTracker(): Promise<void> {
 			logger.info(`Detected game: ${gameNameResult.value}`);
 		}
 
+		const sheetAccessors = config.googleSheets.enabled
+			? createSheetAccessors()
+			: null;
+
 		await collectData(db);
 		await calculateAndSaveDailyAverages(db);
 
@@ -72,10 +76,10 @@ async function startTracker(): Promise<void> {
 				}
 
 				if (
-					config.googleSheets.enabled &&
+					sheetAccessors &&
 					config.scheduling.sheetsSyncMinutes.includes(minute)
 				) {
-					await syncUnsyncedToSheets(db);
+					await syncUnsyncedToSheets(db, sheetAccessors);
 				}
 			} finally {
 				running = false;
