@@ -67,13 +67,6 @@ export function createSheetAccessor<T>(
 	const sheetsPromise = createSheetsClient(keyPath);
 
 	/**
-	 * @description 認証済みクライアントを取得
-	 */
-	async function getSheets(): Promise<sheets_v4.Sheets> {
-		return await sheetsPromise;
-	}
-
-	/**
 	 * @description レート制限付きでAPIリクエストを実行(100ms間隔)
 	 * @param requestFn - 実行するリクエスト関数
 	 */
@@ -96,7 +89,7 @@ export function createSheetAccessor<T>(
 	 * @description シートを新規作成
 	 */
 	async function createSheet(): Promise<void> {
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		try {
 			await sheets.spreadsheets.batchUpdate({
 				spreadsheetId,
@@ -118,7 +111,7 @@ export function createSheetAccessor<T>(
 	 */
 	async function ensureHeader(): Promise<void> {
 		if (headerVerified) return;
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		const { headers } = columnDef;
 		const headerRange = `${sheetName}!A1:${lastCol}1`;
 
@@ -158,7 +151,7 @@ export function createSheetAccessor<T>(
 	 * @returns 行番号(1始まり)またはnull
 	 */
 	async function findRowByKey(key: string): Promise<number | null> {
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		try {
 			const response = await sheets.spreadsheets.values.get({
 				spreadsheetId,
@@ -187,7 +180,7 @@ export function createSheetAccessor<T>(
 	 * @description シートデータをクリア(ヘッダー除く)
 	 */
 	async function clearData(): Promise<void> {
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		try {
 			await rateLimitedRequest(() =>
 				sheets.spreadsheets.values.clear({
@@ -212,7 +205,7 @@ export function createSheetAccessor<T>(
 	 * @param record - 追加するレコード
 	 */
 	async function append(record: T): Promise<void> {
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		try {
 			await ensureHeader();
 
@@ -254,7 +247,7 @@ export function createSheetAccessor<T>(
 	async function batchAppend(records: T[]): Promise<void> {
 		if (records.length === 0) return;
 
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		try {
 			await ensureHeader();
 
@@ -281,7 +274,7 @@ export function createSheetAccessor<T>(
 	 * @param records - 置換するレコードの配列
 	 */
 	async function replaceAll(records: T[]): Promise<void> {
-		const sheets = await getSheets();
+		const sheets = await sheetsPromise;
 		const { headers } = columnDef;
 		try {
 			await clearData();

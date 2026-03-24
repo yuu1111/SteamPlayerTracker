@@ -7,6 +7,7 @@ import {
 	mock,
 	spyOn,
 } from "bun:test";
+import { createTestDatabase } from "../test-helpers";
 
 mock.module("../../src/retry", () => ({
 	retry: async <T>(fn: () => Promise<T>) => fn(),
@@ -83,13 +84,15 @@ describe("collectData", () => {
 				status: 200,
 			}),
 		);
-
-		await expect(collectData()).resolves.toBeUndefined();
+		const { db, cleanup } = createTestDatabase();
+		await expect(collectData(db)).resolves.toBeUndefined();
+		cleanup();
 	});
 
 	it("失敗時もエラーをthrowしない (catchされる)", async () => {
 		fetchSpy.mockResolvedValue(new Response("error", { status: 500 }));
-
-		await expect(collectData()).resolves.toBeUndefined();
+		const { db, cleanup } = createTestDatabase();
+		await expect(collectData(db)).resolves.toBeUndefined();
+		cleanup();
 	});
 });

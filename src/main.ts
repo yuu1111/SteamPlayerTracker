@@ -22,7 +22,6 @@ async function startTracker(): Promise<void> {
 			dbPath: config.storage.dbPath,
 		});
 
-		// 設定検証 + ゲーム名取得を並列実行
 		const [playerCountResult, gameNameResult] = await Promise.allSettled([
 			retry(fetchPlayerCount),
 			fetch(
@@ -52,29 +51,22 @@ async function startTracker(): Promise<void> {
 			logger.info(`Detected game: ${gameNameResult.value}`);
 		}
 
-		// 起動時データ収集
-		await collectData();
+		await collectData(db);
+		await calculateAndSaveDailyAverages(db);
 
-		// 欠落日次平均チェック
-		await calculateAndSaveDailyAverages();
-
-		// 毎分チェック: 該当分にジョブを実行
 		const timer = setInterval(async () => {
 			const now = new Date();
 			const minute = now.getUTCMinutes();
 			const hour = now.getUTCHours();
 
-			// データ収集
 			if (config.scheduling.collectionMinutes.includes(minute)) {
-				await collectData();
+				await collectData(db);
 			}
 
-			// 日次平均 (指定時刻の0分)
 			if (hour === config.scheduling.dailyAverageHour && minute === 0) {
-				await calculateAndSaveDailyAverages();
+				await calculateAndSaveDailyAverages(db);
 			}
 
-			// Google Sheets同期
 			if (
 				config.googleSheets.enabled &&
 				config.scheduling.sheetsSyncMinutes.includes(minute)
@@ -84,7 +76,6 @@ async function startTracker(): Promise<void> {
 		}, 60_000);
 		timers.push(timer);
 
-		// グレースフルシャットダウン
 		const shutdown = (signal: string) => {
 			logger.info(`Received ${signal}. Shutting down...`);
 			for (const t of timers) clearInterval(t);

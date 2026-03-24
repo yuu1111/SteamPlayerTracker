@@ -115,7 +115,6 @@ async function main() {
 	try {
 		using db = createDatabase(config.storage.dbPath);
 
-		// プレイヤーデータのインポート
 		try {
 			const playerContent = await Bun.file(playerCsvPath).text();
 			const playerRecords = parsePlayerDataCsv(playerContent);
@@ -137,7 +136,6 @@ async function main() {
 			}
 		}
 
-		// 日次平均のインポート
 		try {
 			const avgContent = await Bun.file(avgCsvPath).text();
 			const avgRecords = parseDailyAverageCsv(avgContent);

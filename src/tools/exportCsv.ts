@@ -17,7 +17,6 @@ async function main() {
 	try {
 		using db = createDatabase(config.storage.dbPath);
 
-		// プレイヤーデータのエクスポート
 		const players = db.getAllPlayerData();
 		if (players.length > 0) {
 			const header = "timestamp,player_count\n";
@@ -34,7 +33,6 @@ async function main() {
 			logger.warn("No player data to export");
 		}
 
-		// 日次平均のエクスポート
 		const averages = db.getAllDailyAverages();
 		if (averages.length > 0) {
 			const header =

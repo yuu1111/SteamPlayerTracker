@@ -1,14 +1,15 @@
-import { config } from "../config";
-import { createDatabase } from "../db";
+import type { Database } from "../db";
 import { createLogger } from "../logger";
 
 const logger = createLogger("daily-average");
-const db = createDatabase(config.storage.dbPath);
 
 /**
  * @description 欠落している日次平均を計算しバックフィル
+ * @param db - データベースインスタンス
  */
-export async function calculateAndSaveDailyAverages(): Promise<void> {
+export async function calculateAndSaveDailyAverages(
+	db: Database,
+): Promise<void> {
 	try {
 		const missingDates = db.getDatesWithDataButNoAverage();
 

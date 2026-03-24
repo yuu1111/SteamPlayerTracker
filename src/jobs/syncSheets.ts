@@ -74,7 +74,6 @@ export async function syncUnsyncedToSheets(): Promise<void> {
 	using _db = db;
 
 	try {
-		// プレイヤーデータの同期
 		const unsyncedPlayers = db.getUnsyncedPlayerData();
 		if (unsyncedPlayers.length > 0) {
 			logger.info(`Syncing ${unsyncedPlayers.length} player records to Sheets`);
@@ -83,7 +82,6 @@ export async function syncUnsyncedToSheets(): Promise<void> {
 			logger.info(`Synced ${unsyncedPlayers.length} player records`);
 		}
 
-		// 日次平均の同期
 		const unsyncedAverages = db.getUnsyncedDailyAverages();
 		if (unsyncedAverages.length > 0) {
 			logger.info(
@@ -130,12 +128,8 @@ export async function fullSyncToSheets(): Promise<void> {
 	);
 	await dailyAverageSheets.replaceAll(allAverages);
 
-	// 全レコードを同期済みに更新
-	const playerIds = db.getUnsyncedPlayerData().map((r) => r.id);
-	if (playerIds.length > 0) db.markPlayerDataSynced(playerIds);
-
-	const avgDates = db.getUnsyncedDailyAverages().map((r) => r.date);
-	if (avgDates.length > 0) db.markDailyAveragesSynced(avgDates);
+	db.markAllPlayerDataSynced();
+	db.markAllDailyAveragesSynced();
 
 	logger.info("Full sync completed");
 }

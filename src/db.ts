@@ -45,6 +45,7 @@ export interface Database {
 		playerCount: number;
 	}[];
 	markPlayerDataSynced(ids: number[]): void;
+	markAllPlayerDataSynced(): void;
 
 	calculateDailyAverage(date: string): DailyAverageRow | null;
 	upsertDailyAverage(row: DailyAverageRow): void;
@@ -52,6 +53,7 @@ export interface Database {
 	getAllDailyAverages(): DailyAverageRow[];
 	getUnsyncedDailyAverages(): DailyAverageRow[];
 	markDailyAveragesSynced(dates: string[]): void;
+	markAllDailyAveragesSynced(): void;
 	getDatesWithDataButNoAverage(): string[];
 
 	close(): void;
@@ -144,6 +146,12 @@ export function createDatabase(dbPath: string): Database {
 		unsyncedDailyAvg: db.prepare(
 			"SELECT date, average_player_count, sample_count, max_player_count, max_timestamp, min_player_count, min_timestamp FROM daily_averages WHERE synced_at IS NULL ORDER BY date",
 		),
+		markAllPlayerSynced: db.prepare(
+			"UPDATE player_data SET synced_at = ? WHERE synced_at IS NULL",
+		),
+		markAllDailyAvgSynced: db.prepare(
+			"UPDATE daily_averages SET synced_at = ? WHERE synced_at IS NULL",
+		),
 		datesWithNoAverage: db.prepare(`
 			SELECT DISTINCT date(timestamp) AS date FROM player_data
 			WHERE player_count > 0
@@ -234,6 +242,13 @@ export function createDatabase(dbPath: string): Database {
 	}
 
 	/**
+	 * @description 全プレイヤーデータを同期済みに更新
+	 */
+	function markAllPlayerDataSynced(): void {
+		stmts.markAllPlayerSynced.run(new Date().toISOString());
+	}
+
+	/**
 	 * @description 指定日の日次平均をSQLで計算
 	 * @param date - 日付 (YYYY-MM-DD)
 	 * @returns 計算結果(データがない場合はnull)
@@ -300,6 +315,13 @@ export function createDatabase(dbPath: string): Database {
 	}
 
 	/**
+	 * @description 全日次平均を同期済みに更新
+	 */
+	function markAllDailyAveragesSynced(): void {
+		stmts.markAllDailyAvgSynced.run(new Date().toISOString());
+	}
+
+	/**
 	 * @description データはあるが日次平均が未計算の日付を取得
 	 */
 	function getDatesWithDataButNoAverage(): string[] {
@@ -321,12 +343,14 @@ export function createDatabase(dbPath: string): Database {
 		getAllPlayerData,
 		getUnsyncedPlayerData,
 		markPlayerDataSynced,
+		markAllPlayerDataSynced,
 		calculateDailyAverage,
 		upsertDailyAverage,
 		getDailyAverageRange,
 		getAllDailyAverages,
 		getUnsyncedDailyAverages,
 		markDailyAveragesSynced,
+		markAllDailyAveragesSynced,
 		getDatesWithDataButNoAverage,
 		close,
 		[Symbol.dispose]: close,

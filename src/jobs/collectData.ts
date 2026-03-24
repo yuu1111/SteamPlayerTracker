@@ -1,11 +1,10 @@
 import { config } from "../config";
-import { createDatabase } from "../db";
+import type { Database } from "../db";
 import { createLogger } from "../logger";
 import { retry } from "../retry";
 import { steamPlayerCountResponseSchema } from "../schemas/steamApi";
 
 const logger = createLogger("collect-data");
-const db = createDatabase(config.storage.dbPath);
 
 /**
  * @description Steam APIから現在のプレイヤー数を取得
@@ -32,8 +31,9 @@ export async function fetchPlayerCount(): Promise<number> {
 
 /**
  * @description プレイヤーデータを収集してSQLiteに保存
+ * @param db - データベースインスタンス
  */
-export async function collectData(): Promise<void> {
+export async function collectData(db: Database): Promise<void> {
 	try {
 		logger.info("Starting data collection...");
 
