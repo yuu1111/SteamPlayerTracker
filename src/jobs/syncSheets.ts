@@ -70,10 +70,17 @@ function createSheetAccessors() {
 export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 	if (!config.googleSheets.enabled) return;
 
+	const unsyncedPlayers = db.getUnsyncedPlayerData();
+	const unsyncedAverages = db.getUnsyncedDailyAverages();
+
+	if (unsyncedPlayers.length === 0 && unsyncedAverages.length === 0) {
+		logger.debug("No unsynced records to sync");
+		return;
+	}
+
 	const { playerSheets, dailyAverageSheets } = createSheetAccessors();
 
 	try {
-		const unsyncedPlayers = db.getUnsyncedPlayerData();
 		if (unsyncedPlayers.length > 0) {
 			logger.info(`Syncing ${unsyncedPlayers.length} player records to Sheets`);
 			await playerSheets.batchAppend(unsyncedPlayers);
@@ -81,7 +88,6 @@ export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 			logger.info(`Synced ${unsyncedPlayers.length} player records`);
 		}
 
-		const unsyncedAverages = db.getUnsyncedDailyAverages();
 		if (unsyncedAverages.length > 0) {
 			logger.info(
 				`Syncing ${unsyncedAverages.length} daily average records to Sheets`,
@@ -91,10 +97,6 @@ export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 			}
 			db.markDailyAveragesSynced(unsyncedAverages.map((r) => r.date));
 			logger.info(`Synced ${unsyncedAverages.length} daily average records`);
-		}
-
-		if (unsyncedPlayers.length === 0 && unsyncedAverages.length === 0) {
-			logger.debug("No unsynced records to sync");
 		}
 	} catch (error) {
 		logger.error("Sheets sync failed", {

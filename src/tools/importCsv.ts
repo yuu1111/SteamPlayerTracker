@@ -145,11 +145,13 @@ async function main() {
 				`Parsed ${avgRecords.length} daily average records from ${avgCsvPath}`,
 			);
 
-			db.transaction(() => {
-				for (const record of avgRecords) {
-					db.upsertDailyAverage(record);
-				}
-			});
+			if (avgRecords.length > 0) {
+				db.transaction(() => {
+					for (const record of avgRecords) {
+						db.upsertDailyAverage(record);
+					}
+				});
+			}
 			logger.info(`Imported ${avgRecords.length} daily average records`);
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {

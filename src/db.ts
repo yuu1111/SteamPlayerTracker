@@ -57,7 +57,6 @@ export interface Database {
 	getDatesWithDataButNoAverage(): string[];
 
 	run(sql: string): void;
-	run(sql: string): void;
 	transaction<T>(fn: () => T): T;
 	close(): void;
 	[Symbol.dispose](): void;
