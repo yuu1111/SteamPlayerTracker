@@ -42,13 +42,13 @@ export const dailyAverageColumnDef: SheetColumnDef<DailyAverageRow> = {
 };
 
 /**
- * @description Sheets同期用のアクセサを生成
- */
-/**
  * @description Sheets同期用のアクセサセット
  */
 export type SheetAccessors = ReturnType<typeof createSheetAccessors>;
 
+/**
+ * @description Sheets同期用のアクセサを生成
+ */
 export function createSheetAccessors() {
 	const gs = config.googleSheets;
 	if (!gs.enabled) throw new Error("Google Sheets is not enabled");
@@ -68,10 +68,6 @@ export function createSheetAccessors() {
 	};
 }
 
-/**
- * @description 未同期レコードをGoogle Sheetsに同期
- * @param db - データベースインスタンス
- */
 /**
  * @description 未同期レコードをGoogle Sheetsに同期
  * @param db - データベースインスタンス

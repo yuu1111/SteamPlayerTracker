@@ -50,7 +50,7 @@ async function generatePlayerCountChart(
 	logger.info(`Generating player count chart for last ${days} days...`);
 
 	const from = dayjs().subtract(days, "day").format("YYYY-MM-DD 00:00:00");
-	const to = dayjs().format("YYYY-MM-DD 23:59:59");
+	const to = dayjs().add(1, "day").format("YYYY-MM-DD 00:00:00");
 	const data = db.getPlayerDataByDateRange(from, to);
 
 	if (data.length === 0) {
