@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import dayjs from "dayjs";
 import { config } from "../config";
-import { createDatabase } from "../db";
+import { createDatabase, type Database } from "../db";
 import { createLogger } from "../logger";
 
 const logger = createLogger("generate-charts");
@@ -44,7 +44,7 @@ function getChartsDir(): string {
  */
 async function generatePlayerCountChart(
 	days: number,
-	db: ReturnType<typeof createDatabase>,
+	db: Database,
 	canvas: ChartJSNodeCanvas,
 ): Promise<void> {
 	logger.info(`Generating player count chart for last ${days} days...`);
@@ -114,7 +114,7 @@ async function generatePlayerCountChart(
  */
 async function generateDailyAverageChart(
 	days: number,
-	db: ReturnType<typeof createDatabase>,
+	db: Database,
 	canvas: ChartJSNodeCanvas,
 ): Promise<void> {
 	logger.info(`Generating daily average chart for last ${days} days...`);
@@ -197,7 +197,7 @@ async function generateDailyAverageChart(
  * @description DB接続とCanvasを共有して全チャートを生成
  */
 async function generateAllCharts(): Promise<void> {
-	const db = createDatabase(config.storage.dbPath);
+	using db = createDatabase(config.storage.dbPath);
 	const canvas = new ChartJSNodeCanvas({
 		width: defaultConfig.width,
 		height: defaultConfig.height,
@@ -222,8 +222,6 @@ async function generateAllCharts(): Promise<void> {
 			error: error instanceof Error ? error.message : String(error),
 		});
 		process.exit(1);
-	} finally {
-		db.close();
 	}
 }
 
@@ -231,25 +229,17 @@ async function generateAllCharts(): Promise<void> {
  * @description 単一チャートCLI用のDB接続とCanvas生成
  */
 async function runSingleChart(
-	fn: (
-		days: number,
-		db: ReturnType<typeof createDatabase>,
-		canvas: ChartJSNodeCanvas,
-	) => Promise<void>,
+	fn: (days: number, db: Database, canvas: ChartJSNodeCanvas) => Promise<void>,
 	days: number,
 ): Promise<void> {
-	const db = createDatabase(config.storage.dbPath);
+	using db = createDatabase(config.storage.dbPath);
 	const canvas = new ChartJSNodeCanvas({
 		width: defaultConfig.width,
 		height: defaultConfig.height,
 		backgroundColour: defaultConfig.backgroundColor,
 	});
-	try {
-		await fn(days, db, canvas);
-		process.exit(0);
-	} finally {
-		db.close();
-	}
+	await fn(days, db, canvas);
+	process.exit(0);
 }
 
 const args = process.argv.slice(2);

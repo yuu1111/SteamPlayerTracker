@@ -55,6 +55,7 @@ export interface Database {
 	getDatesWithDataButNoAverage(): string[];
 
 	close(): void;
+	[Symbol.dispose](): void;
 }
 
 /**
@@ -67,10 +68,10 @@ export function createDatabase(dbPath: string): Database {
 	}
 	const db = new SQLiteDatabase(dbPath);
 
-	db.exec("PRAGMA journal_mode = WAL");
-	db.exec("PRAGMA foreign_keys = ON");
+	db.run("PRAGMA journal_mode = WAL");
+	db.run("PRAGMA foreign_keys = ON");
 
-	db.exec(`
+	db.run(`
 		CREATE TABLE IF NOT EXISTS player_data (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			timestamp TEXT NOT NULL,
@@ -328,5 +329,6 @@ export function createDatabase(dbPath: string): Database {
 		markDailyAveragesSynced,
 		getDatesWithDataButNoAverage,
 		close,
+		[Symbol.dispose]: close,
 	};
 }

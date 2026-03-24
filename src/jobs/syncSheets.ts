@@ -71,6 +71,7 @@ export async function syncUnsyncedToSheets(): Promise<void> {
 	if (!config.googleSheets.enabled) return;
 
 	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
+	using _db = db;
 
 	try {
 		// プレイヤーデータの同期
@@ -102,8 +103,6 @@ export async function syncUnsyncedToSheets(): Promise<void> {
 		logger.error("Sheets sync failed", {
 			error: error instanceof Error ? error.message : String(error),
 		});
-	} finally {
-		db.close();
 	}
 }
 
@@ -117,29 +116,26 @@ export async function fullSyncToSheets(): Promise<void> {
 	}
 
 	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
+	using _db = db;
 
-	try {
-		logger.info("Starting full sync to Google Sheets...");
+	logger.info("Starting full sync to Google Sheets...");
 
-		const allPlayers = db.getAllPlayerData();
-		logger.info(`Replacing all player data (${allPlayers.length} records)...`);
-		await playerSheets.replaceAll(allPlayers);
+	const allPlayers = db.getAllPlayerData();
+	logger.info(`Replacing all player data (${allPlayers.length} records)...`);
+	await playerSheets.replaceAll(allPlayers);
 
-		const allAverages = db.getAllDailyAverages();
-		logger.info(
-			`Replacing all daily averages (${allAverages.length} records)...`,
-		);
-		await dailyAverageSheets.replaceAll(allAverages);
+	const allAverages = db.getAllDailyAverages();
+	logger.info(
+		`Replacing all daily averages (${allAverages.length} records)...`,
+	);
+	await dailyAverageSheets.replaceAll(allAverages);
 
-		// 全レコードを同期済みに更新
-		const playerIds = db.getUnsyncedPlayerData().map((r) => r.id);
-		if (playerIds.length > 0) db.markPlayerDataSynced(playerIds);
+	// 全レコードを同期済みに更新
+	const playerIds = db.getUnsyncedPlayerData().map((r) => r.id);
+	if (playerIds.length > 0) db.markPlayerDataSynced(playerIds);
 
-		const avgDates = db.getUnsyncedDailyAverages().map((r) => r.date);
-		if (avgDates.length > 0) db.markDailyAveragesSynced(avgDates);
+	const avgDates = db.getUnsyncedDailyAverages().map((r) => r.date);
+	if (avgDates.length > 0) db.markDailyAveragesSynced(avgDates);
 
-		logger.info("Full sync completed");
-	} finally {
-		db.close();
-	}
+	logger.info("Full sync completed");
 }

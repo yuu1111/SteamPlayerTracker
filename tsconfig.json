@@ -1,8 +1,9 @@
 {
 	"extends": "@yuu1111/tsconfig/base.json",
 	"compilerOptions": {
-		"noEmit": true
+		"noEmit": true,
+		"types": ["bun-types"]
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "tests/**/*"],
 	"exclude": ["node_modules", "dist"]
 }

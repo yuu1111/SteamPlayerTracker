@@ -113,7 +113,7 @@ async function main() {
 	const avgCsvPath = args[1] ?? "steam_daily_averages.csv";
 
 	try {
-		const db = createDatabase(config.storage.dbPath);
+		using db = createDatabase(config.storage.dbPath);
 
 		// プレイヤーデータのインポート
 		try {
@@ -157,7 +157,6 @@ async function main() {
 			}
 		}
 
-		db.close();
 		console.log("CSV import completed successfully!");
 		process.exit(0);
 	} catch (error) {

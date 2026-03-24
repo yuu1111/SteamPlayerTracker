@@ -1,7 +1,12 @@
 /**
+ * @description ログレベル
+ */
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+/**
  * @description ログレベルの優先度マップ
  */
-const levels: Record<string, number> = {
+const levels: Record<LogLevel, number> = {
 	debug: 0,
 	info: 1,
 	warn: 2,
@@ -11,7 +16,7 @@ const levels: Record<string, number> = {
 /**
  * @description 現在のログレベル閾値
  */
-const threshold = levels[process.env.LOG_LEVEL ?? "info"] ?? 1;
+const threshold = levels[(process.env.LOG_LEVEL ?? "info") as LogLevel] ?? 1;
 
 /**
  * @description ログエントリをstdoutにJSON出力
@@ -21,7 +26,7 @@ const threshold = levels[process.env.LOG_LEVEL ?? "info"] ?? 1;
  * @param meta - 追加メタデータ
  */
 function log(
-	level: string,
+	level: LogLevel,
 	module: string,
 	msg: string,
 	meta?: Record<string, unknown>,

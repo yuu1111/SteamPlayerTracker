@@ -74,10 +74,10 @@ describe("createSheetAccessor", () => {
 		mockGet.mockResolvedValue({
 			data: { values: [["id", "value"]] },
 		});
-		mockUpdate.mockResolvedValue({});
-		mockAppend.mockResolvedValue({});
-		mockClear.mockResolvedValue({});
-		mockBatchUpdate.mockResolvedValue({});
+		mockUpdate.mockResolvedValue(undefined);
+		mockAppend.mockResolvedValue(undefined);
+		mockClear.mockResolvedValue(undefined);
+		mockBatchUpdate.mockResolvedValue(undefined);
 	});
 
 	describe("append", () => {
@@ -189,7 +189,9 @@ describe("createSheetAccessor", () => {
 
 			expect(mockClear).toHaveBeenCalledTimes(1);
 			expect(mockUpdate).toHaveBeenCalledTimes(1);
-			const call = mockUpdate.mock.calls[0] as [Record<string, unknown>];
+			const call = mockUpdate.mock.calls[0] as unknown as [
+				Record<string, unknown>,
+			];
 			const body = call[0].requestBody as { values: unknown[][] };
 			expect(body.values[0]).toEqual(["id", "value"]);
 			expect(body.values[1]).toEqual(["a", 1]);
@@ -238,7 +240,9 @@ describe("createSheetAccessor", () => {
 			);
 			await accessor.append({ id: "row-1", value: 1 });
 
-			const updateCalls = mockUpdate.mock.calls as [Record<string, unknown>][];
+			const updateCalls = mockUpdate.mock.calls as unknown as [
+				Record<string, unknown>,
+			][];
 			const headerCall = updateCalls.find((c) => {
 				const rb = c[0].requestBody as { values: unknown[][] } | undefined;
 				return rb?.values?.[0]?.[0] === "id";
@@ -284,7 +288,9 @@ describe("createSheetAccessor", () => {
 		it("データなしでnullを返す", async () => {
 			mockGet
 				.mockResolvedValueOnce({ data: { values: [["id", "value"]] } })
-				.mockResolvedValueOnce({ data: { values: null } });
+				.mockResolvedValueOnce({
+					data: { values: null as unknown as string[][] },
+				});
 
 			const accessor = createSheetAccessor(
 				"s1",

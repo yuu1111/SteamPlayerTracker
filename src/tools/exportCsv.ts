@@ -15,7 +15,7 @@ async function main() {
 	const avgCsvPath = args[1] ?? "steam_daily_averages.csv";
 
 	try {
-		const db = createDatabase(config.storage.dbPath);
+		using db = createDatabase(config.storage.dbPath);
 
 		// プレイヤーデータのエクスポート
 		const players = db.getAllPlayerData();
@@ -55,7 +55,6 @@ async function main() {
 			logger.warn("No daily average data to export");
 		}
 
-		db.close();
 		console.log("CSV export completed successfully!");
 		process.exit(0);
 	} catch (error) {
