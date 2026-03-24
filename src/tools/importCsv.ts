@@ -1,5 +1,9 @@
 import { config } from "../config";
-import { createDatabase } from "../db";
+import {
+	createDatabase,
+	type DailyAverageRow,
+	type PlayerDataRow,
+} from "../db";
 import { createLogger } from "../logger";
 
 const logger = createLogger("import-csv");
@@ -8,11 +12,9 @@ const logger = createLogger("import-csv");
  * @description CSVコンテンツからプレイヤーデータ行をパース
  * @param content - CSV文字列
  */
-export function parsePlayerDataCsv(
-	content: string,
-): { timestamp: string; playerCount: number }[] {
+export function parsePlayerDataCsv(content: string): PlayerDataRow[] {
 	const lines = content.trim().split("\n");
-	const results: { timestamp: string; playerCount: number }[] = [];
+	const results: PlayerDataRow[] = [];
 
 	for (const line of lines) {
 		const trimmed = line.trim();
@@ -33,25 +35,9 @@ export function parsePlayerDataCsv(
  * @description CSVコンテンツから日次平均行をパース
  * @param content - CSV文字列
  */
-export function parseDailyAverageCsv(content: string): {
-	date: string;
-	averagePlayerCount: number;
-	sampleCount: number;
-	maxPlayerCount: number;
-	maxTimestamp: string;
-	minPlayerCount: number;
-	minTimestamp: string;
-}[] {
+export function parseDailyAverageCsv(content: string): DailyAverageRow[] {
 	const lines = content.trim().split("\n");
-	const results: {
-		date: string;
-		averagePlayerCount: number;
-		sampleCount: number;
-		maxPlayerCount: number;
-		maxTimestamp: string;
-		minPlayerCount: number;
-		minTimestamp: string;
-	}[] = [];
+	const results: DailyAverageRow[] = [];
 
 	for (const line of lines) {
 		const trimmed = line.trim();
