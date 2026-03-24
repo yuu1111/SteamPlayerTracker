@@ -132,10 +132,7 @@ src/
 └── tools/               # CLIツール (importCsv, exportCsv, generateCharts)
 scripts/
 ├── build.ts             # Bun.buildスクリプト
-├── release.ts           # バージョン更新、CHANGELOG、gitタグ
-├── setup.ps1            # セットアップ (PowerShell)
-├── start.ps1            # 起動 (PowerShell)
-└── sync-google-sheets.ps1  # Google Sheets同期 (PowerShell)
+└── release.ts           # バージョン更新、CHANGELOG、gitタグ
 ```
 
 ## リリース

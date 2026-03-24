@@ -46,7 +46,7 @@ jobs:
           cp CHANGELOG.md "${ARCHIVE_NAME}/"
           cp CHANGELOG-JP.md "${ARCHIVE_NAME}/"
           cp LICENCE "${ARCHIVE_NAME}/"
-          cp scripts/*.ps1 "${ARCHIVE_NAME}/scripts/" 2>/dev/null || true
+
           cp .env.example "${ARCHIVE_NAME}/" 2>/dev/null || true
           tar -czf "${ARCHIVE_NAME}.tar.gz" "${ARCHIVE_NAME}"/
           zip -r "${ARCHIVE_NAME}.zip" "${ARCHIVE_NAME}"/

@@ -132,10 +132,7 @@ src/
 └── tools/               # CLI tools (importCsv, exportCsv, generateCharts)
 scripts/
 ├── build.ts             # Bun.build script
-├── release.ts           # Version bump, changelog, git tag
-├── setup.ps1            # Setup (PowerShell)
-├── start.ps1            # Start (PowerShell)
-└── sync-google-sheets.ps1  # Google Sheets sync (PowerShell)
+└── release.ts           # Version bump, changelog, git tag
 ```
 
 ## Release
