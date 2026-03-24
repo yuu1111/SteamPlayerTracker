@@ -105,6 +105,23 @@ export function parseDailyAverageCsv(content: string): {
 }
 
 /**
+ * @description CSVファイルを読み込む (ENOENTは警告ログのみで継続)
+ * @param path - ファイルパス
+ * @returns ファイル内容 (ファイルが存在しない場合はnull)
+ */
+async function readCsvFile(path: string): Promise<string | null> {
+	try {
+		return await Bun.file(path).text();
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+			logger.warn(`CSV not found: ${path}`);
+			return null;
+		}
+		throw error;
+	}
+}
+
+/**
  * @description メイン処理
  */
 async function main() {
@@ -115,13 +132,12 @@ async function main() {
 	try {
 		using db = createDatabase(config.storage.dbPath);
 
-		try {
-			const playerContent = await Bun.file(playerCsvPath).text();
+		const playerContent = await readCsvFile(playerCsvPath);
+		if (playerContent) {
 			const playerRecords = parsePlayerDataCsv(playerContent);
 			logger.info(
 				`Parsed ${playerRecords.length} player data records from ${playerCsvPath}`,
 			);
-
 			if (playerRecords.length > 0) {
 				db.transaction(() => {
 					for (const record of playerRecords) {
@@ -130,21 +146,14 @@ async function main() {
 				});
 				logger.info(`Imported ${playerRecords.length} player data records`);
 			}
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
-				logger.warn(`Player data CSV not found: ${playerCsvPath}`);
-			} else {
-				throw error;
-			}
 		}
 
-		try {
-			const avgContent = await Bun.file(avgCsvPath).text();
+		const avgContent = await readCsvFile(avgCsvPath);
+		if (avgContent) {
 			const avgRecords = parseDailyAverageCsv(avgContent);
 			logger.info(
 				`Parsed ${avgRecords.length} daily average records from ${avgCsvPath}`,
 			);
-
 			if (avgRecords.length > 0) {
 				db.transaction(() => {
 					for (const record of avgRecords) {
@@ -152,12 +161,6 @@ async function main() {
 					}
 				});
 				logger.info(`Imported ${avgRecords.length} daily average records`);
-			}
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
-				logger.warn(`Daily average CSV not found: ${avgCsvPath}`);
-			} else {
-				throw error;
 			}
 		}
 

@@ -255,8 +255,11 @@ export function createDatabase(dbPath: string): Database {
 		const stmt = db.prepare(
 			`UPDATE ${table} SET synced_at = ? WHERE ${column} IN (${placeholders})`,
 		);
-		stmt.run(now, ...values);
-		stmt.finalize();
+		try {
+			stmt.run(now, ...values);
+		} finally {
+			stmt.finalize();
+		}
 	}
 
 	/**

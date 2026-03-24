@@ -30,6 +30,29 @@ const defaultConfig: ChartConfig = {
 };
 
 /**
+ * @description チャートオプションを生成
+ * @param title - チャートタイトル
+ * @param xLabel - X軸ラベル
+ */
+function buildChartOptions(title: string, xLabel: string) {
+	return {
+		responsive: false,
+		plugins: {
+			title: { display: true, text: title, font: { size: 20 } },
+			legend: { display: true, position: "top" as const },
+		},
+		scales: {
+			x: { display: true, title: { display: true, text: xLabel } },
+			y: {
+				display: true,
+				title: { display: true, text: "Player Count" },
+				beginAtZero: false,
+			},
+		},
+	};
+}
+
+/**
  * @description チャート出力先ディレクトリ
  */
 const chartsDir = resolve(dirname(config.storage.dbPath), "charts");
@@ -74,25 +97,10 @@ async function generatePlayerCountChart(
 				},
 			],
 		},
-		options: {
-			responsive: false,
-			plugins: {
-				title: {
-					display: true,
-					text: `Steam Concurrent Players - Last ${days} Days`,
-					font: { size: 20 },
-				},
-				legend: { display: true, position: "top" as const },
-			},
-			scales: {
-				x: { display: true, title: { display: true, text: "Date/Time" } },
-				y: {
-					display: true,
-					title: { display: true, text: "Player Count" },
-					beginAtZero: false,
-				},
-			},
-		},
+		options: buildChartOptions(
+			`Steam Concurrent Players - Last ${days} Days`,
+			"Date/Time",
+		),
 	};
 
 	const imageBuffer = await canvas.renderToBuffer(configuration);
@@ -158,25 +166,10 @@ async function generateDailyAverageChart(
 	const configuration = {
 		type: "line" as const,
 		data: { labels, datasets },
-		options: {
-			responsive: false,
-			plugins: {
-				title: {
-					display: true,
-					text: `Daily Player Statistics - Last ${days} Days`,
-					font: { size: 20 },
-				},
-				legend: { display: true, position: "top" as const },
-			},
-			scales: {
-				x: { display: true, title: { display: true, text: "Date" } },
-				y: {
-					display: true,
-					title: { display: true, text: "Player Count" },
-					beginAtZero: false,
-				},
-			},
-		},
+		options: buildChartOptions(
+			`Daily Player Statistics - Last ${days} Days`,
+			"Date",
+		),
 	};
 
 	const imageBuffer = await canvas.renderToBuffer(configuration);
