@@ -54,24 +54,31 @@ async function startTracker(): Promise<void> {
 		await collectData(db);
 		await calculateAndSaveDailyAverages(db);
 
+		let running = false;
 		const timer = setInterval(async () => {
-			const now = new Date();
-			const minute = now.getUTCMinutes();
-			const hour = now.getUTCHours();
+			if (running) return;
+			running = true;
+			try {
+				const now = new Date();
+				const minute = now.getUTCMinutes();
+				const hour = now.getUTCHours();
 
-			if (config.scheduling.collectionMinutes.includes(minute)) {
-				await collectData(db);
-			}
+				if (config.scheduling.collectionMinutes.includes(minute)) {
+					await collectData(db);
+				}
 
-			if (hour === config.scheduling.dailyAverageHour && minute === 0) {
-				await calculateAndSaveDailyAverages(db);
-			}
+				if (hour === config.scheduling.dailyAverageHour && minute === 0) {
+					await calculateAndSaveDailyAverages(db);
+				}
 
-			if (
-				config.googleSheets.enabled &&
-				config.scheduling.sheetsSyncMinutes.includes(minute)
-			) {
-				await syncUnsyncedToSheets();
+				if (
+					config.googleSheets.enabled &&
+					config.scheduling.sheetsSyncMinutes.includes(minute)
+				) {
+					await syncUnsyncedToSheets(db);
+				}
+			} finally {
+				running = false;
 			}
 		}, 60_000);
 		timers.push(timer);

@@ -1,3 +1,5 @@
+export {};
+
 const result = await Bun.build({
 	entrypoints: ["src/main.ts"],
 	outdir: "dist",

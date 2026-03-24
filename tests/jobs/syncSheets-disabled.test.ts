@@ -20,10 +20,10 @@ const { fullSyncToSheets, syncUnsyncedToSheets } = await import(
 
 describe("syncSheets (Google Sheets無効)", () => {
 	it("syncUnsyncedToSheetsが早期リターンする", async () => {
-		await expect(syncUnsyncedToSheets()).resolves.toBeUndefined();
+		await expect(syncUnsyncedToSheets(null as never)).resolves.toBeUndefined();
 	});
 
 	it("fullSyncToSheetsが早期リターンする", async () => {
-		await expect(fullSyncToSheets()).resolves.toBeUndefined();
+		await expect(fullSyncToSheets(null as never)).resolves.toBeUndefined();
 	});
 });

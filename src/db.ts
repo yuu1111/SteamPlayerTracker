@@ -79,10 +79,16 @@ export function createDatabase(dbPath: string): Database {
 			timestamp TEXT NOT NULL,
 			player_count INTEGER NOT NULL,
 			synced_at TEXT
-		);
-		CREATE INDEX IF NOT EXISTS idx_player_data_timestamp ON player_data(timestamp);
-		CREATE INDEX IF NOT EXISTS idx_player_data_unsynced ON player_data(synced_at) WHERE synced_at IS NULL;
+		)
+	`);
+	db.run(
+		"CREATE INDEX IF NOT EXISTS idx_player_data_timestamp ON player_data(timestamp)",
+	);
+	db.run(
+		"CREATE INDEX IF NOT EXISTS idx_player_data_unsynced ON player_data(synced_at) WHERE synced_at IS NULL",
+	);
 
+	db.run(`
 		CREATE TABLE IF NOT EXISTS daily_averages (
 			date TEXT PRIMARY KEY,
 			average_player_count INTEGER NOT NULL,
@@ -92,9 +98,11 @@ export function createDatabase(dbPath: string): Database {
 			min_player_count INTEGER NOT NULL,
 			min_timestamp TEXT NOT NULL,
 			synced_at TEXT
-		);
-		CREATE INDEX IF NOT EXISTS idx_daily_averages_unsynced ON daily_averages(synced_at) WHERE synced_at IS NULL;
+		)
 	`);
+	db.run(
+		"CREATE INDEX IF NOT EXISTS idx_daily_averages_unsynced ON daily_averages(synced_at) WHERE synced_at IS NULL",
+	);
 
 	const stmts = {
 		insertPlayer: db.prepare(

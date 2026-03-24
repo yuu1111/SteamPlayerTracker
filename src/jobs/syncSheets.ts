@@ -1,6 +1,5 @@
 import { config } from "../config";
-import type { DailyAverageRow, PlayerDataRow } from "../db";
-import { createDatabase } from "../db";
+import type { DailyAverageRow, Database, PlayerDataRow } from "../db";
 import { createSheetAccessor, type SheetColumnDef } from "../googleSheets";
 import { createLogger } from "../logger";
 
@@ -43,35 +42,35 @@ export const dailyAverageColumnDef: SheetColumnDef<DailyAverageRow> = {
 };
 
 /**
- * @description Sheets同期に必要なリソースを生成
+ * @description Sheets同期用のアクセサを生成
  */
-function createSyncContext() {
+function createSheetAccessors() {
 	const gs = config.googleSheets;
 	if (!gs.enabled) throw new Error("Google Sheets is not enabled");
-	const db = createDatabase(config.storage.dbPath);
-	const playerSheets = createSheetAccessor(
-		gs.spreadsheetId,
-		gs.sheetName,
-		gs.serviceAccountKeyPath,
-		playerDataColumnDef,
-	);
-	const dailyAverageSheets = createSheetAccessor(
-		gs.spreadsheetId,
-		gs.dailyAverageSheetName,
-		gs.serviceAccountKeyPath,
-		dailyAverageColumnDef,
-	);
-	return { db, playerSheets, dailyAverageSheets };
+	return {
+		playerSheets: createSheetAccessor(
+			gs.spreadsheetId,
+			gs.sheetName,
+			gs.serviceAccountKeyPath,
+			playerDataColumnDef,
+		),
+		dailyAverageSheets: createSheetAccessor(
+			gs.spreadsheetId,
+			gs.dailyAverageSheetName,
+			gs.serviceAccountKeyPath,
+			dailyAverageColumnDef,
+		),
+	};
 }
 
 /**
  * @description 未同期レコードをGoogle Sheetsに同期
+ * @param db - データベースインスタンス
  */
-export async function syncUnsyncedToSheets(): Promise<void> {
+export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 	if (!config.googleSheets.enabled) return;
 
-	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
-	using _db = db;
+	const { playerSheets, dailyAverageSheets } = createSheetAccessors();
 
 	try {
 		const unsyncedPlayers = db.getUnsyncedPlayerData();
@@ -107,14 +106,17 @@ export async function syncUnsyncedToSheets(): Promise<void> {
 /**
  * @description 全データをGoogle Sheetsに完全同期(replaceAll)
  */
-export async function fullSyncToSheets(): Promise<void> {
+/**
+ * @description 全データをGoogle Sheetsに完全同期(replaceAll)
+ * @param db - データベースインスタンス
+ */
+export async function fullSyncToSheets(db: Database): Promise<void> {
 	if (!config.googleSheets.enabled) {
 		logger.error("Google Sheets is not enabled");
 		return;
 	}
 
-	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
-	using _db = db;
+	const { playerSheets, dailyAverageSheets } = createSheetAccessors();
 
 	logger.info("Starting full sync to Google Sheets...");
 

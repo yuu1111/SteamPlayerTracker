@@ -17,14 +17,7 @@ mock.module("../../src/googleSheets", () => ({
 	}),
 }));
 
-/**
- * @description テスト用DBインスタンスを保持 - createDatabaseモックが返すDB
- */
 let sharedDb: Database;
-
-mock.module("../../src/db", () => ({
-	createDatabase: () => sharedDb,
-}));
 
 mock.module("../../src/config", () => ({
 	config: {
@@ -112,7 +105,7 @@ describe("syncUnsyncedToSheets", () => {
 	});
 
 	it("未同期データなしでno-op", async () => {
-		await syncUnsyncedToSheets();
+		await syncUnsyncedToSheets(sharedDb);
 		expect(mockBatchAppend).not.toHaveBeenCalled();
 		expect(mockAppend).not.toHaveBeenCalled();
 	});
@@ -120,14 +113,14 @@ describe("syncUnsyncedToSheets", () => {
 	it("未同期プレイヤーデータがある場合にbatchAppendが呼ばれる", async () => {
 		sharedDb.insertPlayerData("2024-06-01 12:00:00", 5000);
 
-		await syncUnsyncedToSheets();
+		await syncUnsyncedToSheets(sharedDb);
 		expect(mockBatchAppend).toHaveBeenCalledTimes(1);
 	});
 
 	it("未同期日次平均がある場合にappendが呼ばれる", async () => {
 		sharedDb.upsertDailyAverage(sampleDailyAverageRow("2024-06-01"));
 
-		await syncUnsyncedToSheets();
+		await syncUnsyncedToSheets(sharedDb);
 		expect(mockAppend).toHaveBeenCalled();
 	});
 
@@ -135,7 +128,7 @@ describe("syncUnsyncedToSheets", () => {
 		sharedDb.insertPlayerData("2024-06-02 12:00:00", 3000);
 		mockBatchAppend.mockRejectedValueOnce(new Error("API error"));
 
-		await expect(syncUnsyncedToSheets()).resolves.toBeUndefined();
+		await expect(syncUnsyncedToSheets(sharedDb)).resolves.toBeUndefined();
 	});
 });
 
@@ -150,7 +143,7 @@ describe("fullSyncToSheets", () => {
 		sharedDb.insertPlayerData("2024-06-01 12:00:00", 5000);
 		sharedDb.upsertDailyAverage(sampleDailyAverageRow("2024-06-01"));
 
-		await expect(fullSyncToSheets()).resolves.toBeUndefined();
+		await expect(fullSyncToSheets(sharedDb)).resolves.toBeUndefined();
 		expect(mockReplaceAll).toHaveBeenCalledTimes(2);
 	});
 });
