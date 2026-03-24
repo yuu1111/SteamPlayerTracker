@@ -92,9 +92,7 @@ export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 			logger.info(
 				`Syncing ${unsyncedAverages.length} daily average records to Sheets`,
 			);
-			for (const record of unsyncedAverages) {
-				await dailyAverageSheets.append(record);
-			}
+			await dailyAverageSheets.batchAppend(unsyncedAverages);
 			db.markDailyAveragesSynced(unsyncedAverages.map((r) => r.date));
 			logger.info(`Synced ${unsyncedAverages.length} daily average records`);
 		}
