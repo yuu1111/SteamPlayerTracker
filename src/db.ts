@@ -56,6 +56,9 @@ export interface Database {
 	markAllDailyAveragesSynced(): void;
 	getDatesWithDataButNoAverage(): string[];
 
+	run(sql: string): void;
+	run(sql: string): void;
+	transaction<T>(fn: () => T): T;
 	close(): void;
 	[Symbol.dispose](): void;
 }
@@ -263,7 +266,12 @@ export function createDatabase(dbPath: string): Database {
 	 */
 	function calculateDailyAverage(date: string): DailyAverageRow | null {
 		const row = stmts.calcDailyAvg.get({ $date: date }) as Row | null;
-		if (!row || row.sample_count === 0 || row.max_timestamp === null)
+		if (
+			!row ||
+			row.sample_count === 0 ||
+			row.max_timestamp === null ||
+			row.min_timestamp === null
+		)
 			return null;
 		return toDailyAvgRow(row);
 	}
@@ -339,6 +347,30 @@ export function createDatabase(dbPath: string): Database {
 	}
 
 	/**
+	 * @description 生SQLを実行
+	 * @param sql - SQL文
+	 */
+	function run(sql: string): void {
+		db.run(sql);
+	}
+
+	/**
+	 * @description トランザクション内で関数を実行
+	 * @param fn - トランザクション内で実行する関数
+	 */
+	function transaction<T>(fn: () => T): T {
+		db.run("BEGIN");
+		try {
+			const result = fn();
+			db.run("COMMIT");
+			return result;
+		} catch (error) {
+			db.run("ROLLBACK");
+			throw error;
+		}
+	}
+
+	/**
 	 * @description データベースを閉じる
 	 */
 	function close(): void {
@@ -360,6 +392,8 @@ export function createDatabase(dbPath: string): Database {
 		markDailyAveragesSynced,
 		markAllDailyAveragesSynced,
 		getDatesWithDataButNoAverage,
+		run,
+		transaction,
 		close,
 		[Symbol.dispose]: close,
 	};

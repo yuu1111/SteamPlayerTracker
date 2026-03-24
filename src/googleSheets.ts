@@ -62,7 +62,13 @@ export function createSheetAccessor<T>(
 	let lastRequestTime = 0;
 	const minRequestInterval = 100;
 	let headerVerified = false;
-	const lastCol = columnDef.columnRange.split(":")[1];
+	const parts = columnDef.columnRange.split(":");
+	if (parts.length !== 2 || !parts[1]) {
+		throw new Error(
+			`Invalid columnRange "${columnDef.columnRange}": expected "A:B" format`,
+		);
+	}
+	const lastCol = parts[1];
 
 	const sheetsPromise = createSheetsClient(keyPath);
 

@@ -105,9 +105,6 @@ export async function syncUnsyncedToSheets(db: Database): Promise<void> {
 
 /**
  * @description 全データをGoogle Sheetsに完全同期(replaceAll)
- */
-/**
- * @description 全データをGoogle Sheetsに完全同期(replaceAll)
  * @param db - データベースインスタンス
  */
 export async function fullSyncToSheets(db: Database): Promise<void> {

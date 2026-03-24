@@ -98,10 +98,7 @@ async function generatePlayerCountChart(
 	};
 
 	const imageBuffer = await canvas.renderToBuffer(configuration);
-	const chartsDir = getChartsDir();
-	const outputPath = resolve(chartsDir, `player_count_${days}days.png`);
-
-	await fs.mkdir(chartsDir, { recursive: true });
+	const outputPath = resolve(getChartsDir(), `player_count_${days}days.png`);
 	await fs.writeFile(outputPath, imageBuffer);
 	logger.info(`Player count chart saved to ${outputPath}`);
 }
@@ -185,10 +182,7 @@ async function generateDailyAverageChart(
 	};
 
 	const imageBuffer = await canvas.renderToBuffer(configuration);
-	const chartsDir = getChartsDir();
-	const outputPath = resolve(chartsDir, `daily_average_${days}days.png`);
-
-	await fs.mkdir(chartsDir, { recursive: true });
+	const outputPath = resolve(getChartsDir(), `daily_average_${days}days.png`);
 	await fs.writeFile(outputPath, imageBuffer);
 	logger.info(`Daily average chart saved to ${outputPath}`);
 }
@@ -206,6 +200,7 @@ async function generateAllCharts(): Promise<void> {
 
 	try {
 		logger.info("Starting chart generation...");
+		await fs.mkdir(getChartsDir(), { recursive: true });
 
 		await generatePlayerCountChart(1, db, canvas);
 		await generatePlayerCountChart(7, db, canvas);
@@ -238,6 +233,7 @@ async function runSingleChart(
 		height: defaultConfig.height,
 		backgroundColour: defaultConfig.backgroundColor,
 	});
+	await fs.mkdir(getChartsDir(), { recursive: true });
 	await fn(days, db, canvas);
 	process.exit(0);
 }
@@ -248,11 +244,11 @@ const days = args[1] ? Number.parseInt(args[1], 10) : undefined;
 
 switch (command) {
 	case "player-count":
-		runSingleChart(generatePlayerCountChart, days || 7);
+		await runSingleChart(generatePlayerCountChart, days || 7);
 		break;
 	case "daily-average":
-		runSingleChart(generateDailyAverageChart, days || 30);
+		await runSingleChart(generateDailyAverageChart, days || 30);
 		break;
 	default:
-		generateAllCharts();
+		await generateAllCharts();
 }

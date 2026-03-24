@@ -123,9 +123,11 @@ async function main() {
 			);
 
 			if (playerRecords.length > 0) {
-				for (const record of playerRecords) {
-					db.insertPlayerData(record.timestamp, record.playerCount);
-				}
+				db.transaction(() => {
+					for (const record of playerRecords) {
+						db.insertPlayerData(record.timestamp, record.playerCount);
+					}
+				});
 				logger.info(`Imported ${playerRecords.length} player data records`);
 			}
 		} catch (error) {
@@ -143,9 +145,11 @@ async function main() {
 				`Parsed ${avgRecords.length} daily average records from ${avgCsvPath}`,
 			);
 
-			for (const record of avgRecords) {
-				db.upsertDailyAverage(record);
-			}
+			db.transaction(() => {
+				for (const record of avgRecords) {
+					db.upsertDailyAverage(record);
+				}
+			});
 			logger.info(`Imported ${avgRecords.length} daily average records`);
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
