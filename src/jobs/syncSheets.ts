@@ -1,4 +1,3 @@
-import type { CronController } from "bun";
 import { config } from "../config";
 import type { DailyAverageRow, PlayerDataRow } from "../db";
 import { createDatabase } from "../db";
@@ -68,7 +67,7 @@ function createSyncContext() {
 /**
  * @description 未同期レコードをGoogle Sheetsに同期
  */
-async function syncUnsyncedToSheets(): Promise<void> {
+export async function syncUnsyncedToSheets(): Promise<void> {
 	if (!config.googleSheets.enabled) return;
 
 	const { db, playerSheets, dailyAverageSheets } = createSyncContext();
@@ -144,9 +143,3 @@ export async function fullSyncToSheets(): Promise<void> {
 		db.close();
 	}
 }
-
-export default {
-	async scheduled(_controller: CronController) {
-		await syncUnsyncedToSheets();
-	},
-};

@@ -15,7 +15,6 @@ mock.module("../../src/retry", () => ({
 const { fetchPlayerCount, collectData } = await import(
 	"../../src/jobs/collectData"
 );
-const collectDataModule = await import("../../src/jobs/collectData");
 
 describe("fetchPlayerCount", () => {
 	let fetchSpy: ReturnType<typeof spyOn>;
@@ -92,29 +91,5 @@ describe("collectData", () => {
 		fetchSpy.mockResolvedValue(new Response("error", { status: 500 }));
 
 		await expect(collectData()).resolves.toBeUndefined();
-	});
-});
-
-describe("default export (cron handler)", () => {
-	let fetchSpy: ReturnType<typeof spyOn>;
-
-	beforeEach(() => {
-		fetchSpy = spyOn(globalThis, "fetch");
-	});
-
-	afterEach(() => {
-		fetchSpy.mockRestore();
-	});
-
-	it("scheduled()がcollectDataを呼び出す", async () => {
-		fetchSpy.mockResolvedValue(
-			new Response(JSON.stringify({ response: { player_count: 100 } }), {
-				status: 200,
-			}),
-		);
-
-		await expect(
-			collectDataModule.default.scheduled({} as never),
-		).resolves.toBeUndefined();
 	});
 });

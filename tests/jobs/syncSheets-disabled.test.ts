@@ -14,15 +14,13 @@ mock.module("../../src/config", () => ({
 	},
 }));
 
-const { fullSyncToSheets, default: syncSheetsDefault } = await import(
+const { fullSyncToSheets, syncUnsyncedToSheets } = await import(
 	"../../src/jobs/syncSheets"
 );
 
 describe("syncSheets (Google Sheets無効)", () => {
 	it("syncUnsyncedToSheetsが早期リターンする", async () => {
-		await expect(
-			syncSheetsDefault.scheduled({} as never),
-		).resolves.toBeUndefined();
+		await expect(syncUnsyncedToSheets()).resolves.toBeUndefined();
 	});
 
 	it("fullSyncToSheetsが早期リターンする", async () => {

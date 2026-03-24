@@ -1,9 +1,5 @@
-import { Glob } from "bun";
-
-const entrypoints = ["src/main.ts", ...new Glob("src/jobs/*.ts").scanSync(".")];
-
 const result = await Bun.build({
-	entrypoints,
+	entrypoints: ["src/main.ts"],
 	outdir: "dist",
 	root: "src",
 	target: "node",

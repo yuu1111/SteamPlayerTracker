@@ -50,7 +50,7 @@ const {
 	playerDataColumnDef,
 	dailyAverageColumnDef,
 	fullSyncToSheets,
-	default: syncSheetsDefault,
+	syncUnsyncedToSheets,
 } = await import("../../src/jobs/syncSheets");
 
 describe("playerDataColumnDef", () => {
@@ -112,7 +112,7 @@ describe("syncUnsyncedToSheets", () => {
 	});
 
 	it("未同期データなしでno-op", async () => {
-		await syncSheetsDefault.scheduled({} as never);
+		await syncUnsyncedToSheets();
 		expect(mockBatchAppend).not.toHaveBeenCalled();
 		expect(mockAppend).not.toHaveBeenCalled();
 	});
@@ -120,14 +120,14 @@ describe("syncUnsyncedToSheets", () => {
 	it("未同期プレイヤーデータがある場合にbatchAppendが呼ばれる", async () => {
 		sharedDb.insertPlayerData("2024-06-01 12:00:00", 5000);
 
-		await syncSheetsDefault.scheduled({} as never);
+		await syncUnsyncedToSheets();
 		expect(mockBatchAppend).toHaveBeenCalledTimes(1);
 	});
 
 	it("未同期日次平均がある場合にappendが呼ばれる", async () => {
 		sharedDb.upsertDailyAverage(sampleDailyAverageRow("2024-06-01"));
 
-		await syncSheetsDefault.scheduled({} as never);
+		await syncUnsyncedToSheets();
 		expect(mockAppend).toHaveBeenCalled();
 	});
 
@@ -135,9 +135,7 @@ describe("syncUnsyncedToSheets", () => {
 		sharedDb.insertPlayerData("2024-06-02 12:00:00", 3000);
 		mockBatchAppend.mockRejectedValueOnce(new Error("API error"));
 
-		await expect(
-			syncSheetsDefault.scheduled({} as never),
-		).resolves.toBeUndefined();
+		await expect(syncUnsyncedToSheets()).resolves.toBeUndefined();
 	});
 });
 

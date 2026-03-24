@@ -24,7 +24,8 @@ async function main() {
 			const rows = players
 				.map((r) => `${r.timestamp},${r.playerCount}`)
 				.join("\n");
-			await fs.mkdir(dirname(playerCsvPath), { recursive: true });
+			const playerDir = dirname(playerCsvPath);
+			if (playerDir !== ".") await fs.mkdir(playerDir, { recursive: true });
 			await fs.writeFile(playerCsvPath, `${header + rows}\n`, "utf8");
 			logger.info(
 				`Exported ${players.length} player records to ${playerCsvPath}`,
@@ -44,7 +45,8 @@ async function main() {
 						`${r.date},${r.averagePlayerCount},${r.sampleCount},${r.maxPlayerCount},${r.maxTimestamp},${r.minPlayerCount},${r.minTimestamp}`,
 				)
 				.join("\n");
-			await fs.mkdir(dirname(avgCsvPath), { recursive: true });
+			const avgDir = dirname(avgCsvPath);
+			if (avgDir !== ".") await fs.mkdir(avgDir, { recursive: true });
 			await fs.writeFile(avgCsvPath, `${header + rows}\n`, "utf8");
 			logger.info(
 				`Exported ${averages.length} daily average records to ${avgCsvPath}`,

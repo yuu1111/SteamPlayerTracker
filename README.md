@@ -6,7 +6,7 @@ A Bun-based TypeScript application that periodically fetches concurrent player c
 
 ## Features
 
-- Scheduled player count collection via `Bun.cron`
+- Scheduled player count collection (setInterval-based)
 - SQLite storage (WAL mode) with automatic schema migration
 - Daily statistics: average, max/min player counts with timestamps
 - Optional Google Sheets sync with rate limiting (100ms)
@@ -16,7 +16,7 @@ A Bun-based TypeScript application that periodically fetches concurrent player c
 
 ## Requirements
 
-- [Bun](https://bun.sh/) v1.1+
+- [Bun](https://bun.sh/) v1.3.11+
 - (Optional) Google Cloud Platform service account for Sheets integration
 
 ## Setup
@@ -121,7 +121,7 @@ Records with 0 player count are excluded from averages (treated as API failures)
 
 ```
 src/
-├── main.ts              # Entry point, Bun.cron registration
+├── main.ts              # Entry point, scheduler registration
 ├── config.ts            # Env parsing with Zod discriminated union
 ├── db.ts                # SQLite initialization, migrations, query helpers
 ├── logger.ts            # Structured JSON logger (stdout)

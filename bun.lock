@@ -8,7 +8,7 @@
         "chart.js": "^4.5.1",
         "chartjs-node-canvas": "^5.0.0",
         "dayjs": "^1.11.20",
-        "dev-clean": "^1.0.6",
+        "dev-clean": "^1.0.8",
         "googleapis": "^171.4.0",
         "zod": "^4.3.6",
       },
@@ -17,7 +17,7 @@
         "@types/bun": "^1.3.11",
         "@yuu1111/biome-config": "^1.0.3",
         "@yuu1111/tsconfig": "^1.0.2",
-        "typescript": "^5.9.3",
+        "typescript": "^6.0.2",
       },
     },
   },
@@ -88,7 +88,7 @@
 
     "detect-libc": ["detect-libc@2.0.4", "", {}, "sha512-3UDv+G9CsCKO1WKMGw9fwq/SWJYbI0c5Y7LU1AXYoDdbhE2AHQ6N6Nb34sG8Fj7T5APy8qXDCKuuIHd1BR0tVA=="],
 
-    "dev-clean": ["dev-clean@1.0.6", "", { "bin": { "dev-clean": "dist/cli.js" } }, "sha512-dJOPNFGdFe1arDZagLOa71r8vzsw3vGea/j2d03PtOyGYz7H+XncUCLZjGn9B0NudvjOUGvVBY8XOBj5b3l/7Q=="],
+    "dev-clean": ["dev-clean@1.0.8", "", { "bin": { "dev-clean": "dist/cli.js" } }, "sha512-c5NzT7kbvt14sXs42Ypq0fKBc2+kG0vU7ISBxyQO8vv4MP12EtHJbrbXA7PQZ2n+ldGqAHTGPyhBFA5CFsrbBg=="],
 
     "dunder-proto": ["dunder-proto@1.0.1", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.1", "es-errors": "^1.3.0", "gopd": "^1.2.0" } }, "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A=="],
 
@@ -214,7 +214,7 @@
 
     "tunnel-agent": ["tunnel-agent@0.6.0", "", { "dependencies": { "safe-buffer": "^5.0.1" } }, "sha512-McnNiV1l8RYeY8tBgEpuodCC1mLUdbSN+CYBL7kJsJNInOP8UjDDEwdk6Mw60vdLLrr5NHKZhMAOSrR2NZuQ+w=="],
 
-    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+    "typescript": ["typescript@6.0.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="],
 
     "undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
 

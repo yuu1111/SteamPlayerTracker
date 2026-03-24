@@ -2,6 +2,7 @@ import { config } from "./config";
 import { createDatabase } from "./db";
 import { collectData, fetchPlayerCount } from "./jobs/collectData";
 import { calculateAndSaveDailyAverages } from "./jobs/dailyAverage";
+import { syncUnsyncedToSheets } from "./jobs/syncSheets";
 import { createLogger } from "./logger";
 import { retry } from "./retry";
 import { steamAppDetailsSchema } from "./schemas/steamApi";
@@ -13,20 +14,7 @@ async function startTracker(): Promise<void> {
 	const logger = createLogger("main");
 	const db = createDatabase(config.storage.dbPath);
 
-	const cronJobNames: string[] = [];
-
-	/**
-	 * @description 登録済みcronジョブを削除
-	 */
-	async function removeCronJobs(): Promise<void> {
-		for (const name of cronJobNames) {
-			try {
-				await Bun.cron.remove(name);
-			} catch (_error) {
-				// シャットダウン中のcron削除失敗は無視
-			}
-		}
-	}
+	const timers: ReturnType<typeof setInterval>[] = [];
 
 	try {
 		logger.info("Steam Player Tracker starting...", {
@@ -70,38 +58,36 @@ async function startTracker(): Promise<void> {
 		// 欠落日次平均チェック
 		await calculateAndSaveDailyAverages();
 
-		// Bun.cron 登録: データ収集
-		const collectWorker = "./jobs/collectData.ts";
-		for (const minute of config.scheduling.collectionMinutes) {
-			const name = `steam-tracker-collect-${minute}`;
-			await Bun.cron(collectWorker, `${minute} * * * *`, name);
-			cronJobNames.push(name);
-		}
+		// 毎分チェック: 該当分にジョブを実行
+		const timer = setInterval(async () => {
+			const now = new Date();
+			const minute = now.getUTCMinutes();
+			const hour = now.getUTCHours();
 
-		// Bun.cron 登録: 日次平均
-		{
-			const name = "steam-tracker-daily-avg";
-			await Bun.cron(
-				"./jobs/dailyAverage.ts",
-				`0 ${config.scheduling.dailyAverageHour} * * *`,
-				name,
-			);
-			cronJobNames.push(name);
-		}
-
-		// Bun.cron 登録: Google Sheets同期
-		if (config.googleSheets.enabled) {
-			for (const minute of config.scheduling.sheetsSyncMinutes) {
-				const name = `steam-tracker-sync-sheets-${minute}`;
-				await Bun.cron("./jobs/syncSheets.ts", `${minute} * * * *`, name);
-				cronJobNames.push(name);
+			// データ収集
+			if (config.scheduling.collectionMinutes.includes(minute)) {
+				await collectData();
 			}
-		}
+
+			// 日次平均 (指定時刻の0分)
+			if (hour === config.scheduling.dailyAverageHour && minute === 0) {
+				await calculateAndSaveDailyAverages();
+			}
+
+			// Google Sheets同期
+			if (
+				config.googleSheets.enabled &&
+				config.scheduling.sheetsSyncMinutes.includes(minute)
+			) {
+				await syncUnsyncedToSheets();
+			}
+		}, 60_000);
+		timers.push(timer);
 
 		// グレースフルシャットダウン
-		const shutdown = async (signal: string) => {
+		const shutdown = (signal: string) => {
 			logger.info(`Received ${signal}. Shutting down...`);
-			await removeCronJobs();
+			for (const t of timers) clearInterval(t);
 			db.close();
 			process.exit(0);
 		};
@@ -117,6 +103,7 @@ async function startTracker(): Promise<void> {
 		logger.error("Failed to start", {
 			error: error instanceof Error ? error.message : String(error),
 		});
+		for (const t of timers) clearInterval(t);
 		db.close();
 		throw error;
 	}

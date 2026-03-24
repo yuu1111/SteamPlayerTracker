@@ -50,7 +50,7 @@ bun run generate-charts      # チャート画像生成
 
 ## ソースコード構成
 
-- `src/main.ts` - エントリーポイント。依存を直接組み立て、inline Bun.cronでスケジュール登録
+- `src/main.ts` - エントリーポイント。依存を直接組み立て、setIntervalで毎分スケジュール実行
 - `src/config.ts` - 環境変数をZodスキーマでパースし設定オブジェクトを生成
 - `src/db.ts` - SQLiteデータベース初期化、マイグレーション、クエリヘルパー
 - `src/logger.ts` - 軽量構造化ロガー (JSON stdout出力)

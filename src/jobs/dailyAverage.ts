@@ -1,4 +1,3 @@
-import type { CronController } from "bun";
 import { config } from "../config";
 import { createDatabase } from "../db";
 import { createLogger } from "../logger";
@@ -40,9 +39,3 @@ export async function calculateAndSaveDailyAverages(): Promise<void> {
 		});
 	}
 }
-
-export default {
-	async scheduled(_controller: CronController) {
-		await calculateAndSaveDailyAverages();
-	},
-};

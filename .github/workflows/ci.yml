@@ -26,5 +26,8 @@ jobs:
       - name: Run linter
         run: bunx biome ci .
 
+      - name: Run tests
+        run: STEAM_APP_ID=730 DB_PATH=data/test.db bun test
+
       - name: Build application
         run: bun run build
