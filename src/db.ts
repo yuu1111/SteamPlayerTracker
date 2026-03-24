@@ -156,8 +156,14 @@ export function createDatabase(dbPath: string): Database {
 		unsyncedDailyAvg: db.prepare(
 			"SELECT date, average_player_count, sample_count, max_player_count, max_timestamp, min_player_count, min_timestamp FROM daily_averages WHERE synced_at IS NULL ORDER BY date",
 		),
+		markPlayerSyncedById: db.prepare(
+			"UPDATE player_data SET synced_at = ? WHERE id = ?",
+		),
 		markAllPlayerSynced: db.prepare(
 			"UPDATE player_data SET synced_at = ? WHERE synced_at IS NULL",
+		),
+		markDailyAvgSyncedByDate: db.prepare(
+			"UPDATE daily_averages SET synced_at = ? WHERE date = ?",
 		),
 		markAllDailyAvgSynced: db.prepare(
 			"UPDATE daily_averages SET synced_at = ? WHERE synced_at IS NULL",
@@ -239,35 +245,15 @@ export function createDatabase(dbPath: string): Database {
 	}
 
 	/**
-	 * @description 指定テーブルのレコードを同期済みに更新
-	 * @param table - テーブル名
-	 * @param column - キーカラム名
-	 * @param values - 更新対象の値配列
-	 */
-	function markSyncedByColumn(
-		table: "player_data" | "daily_averages",
-		column: "id" | "date",
-		values: (number | string)[],
-	): void {
-		if (values.length === 0) return;
-		const now = new Date().toISOString();
-		const placeholders = values.map(() => "?").join(",");
-		const stmt = db.prepare(
-			`UPDATE ${table} SET synced_at = ? WHERE ${column} IN (${placeholders})`,
-		);
-		try {
-			stmt.run(now, ...values);
-		} finally {
-			stmt.finalize();
-		}
-	}
-
-	/**
 	 * @description プレイヤーデータを同期済みに更新
 	 * @param ids - 更新対象のID配列
 	 */
 	function markPlayerDataSynced(ids: number[]): void {
-		markSyncedByColumn("player_data", "id", ids);
+		if (ids.length === 0) return;
+		const now = new Date().toISOString();
+		transaction(() => {
+			for (const id of ids) stmts.markPlayerSyncedById.run(now, id);
+		});
 	}
 
 	/**
@@ -340,7 +326,11 @@ export function createDatabase(dbPath: string): Database {
 	 * @param dates - 更新対象の日付配列
 	 */
 	function markDailyAveragesSynced(dates: string[]): void {
-		markSyncedByColumn("daily_averages", "date", dates);
+		if (dates.length === 0) return;
+		const now = new Date().toISOString();
+		transaction(() => {
+			for (const date of dates) stmts.markDailyAvgSyncedByDate.run(now, date);
+		});
 	}
 
 	/**
