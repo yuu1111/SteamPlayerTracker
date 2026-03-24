@@ -241,6 +241,10 @@ async function runSingleChart(
 const args = process.argv.slice(2);
 const command = args[0];
 const days = args[1] ? Number.parseInt(args[1], 10) : undefined;
+if (days !== undefined && Number.isNaN(days)) {
+	console.error(`Invalid days argument: "${args[1]}"`);
+	process.exit(1);
+}
 
 switch (command) {
 	case "player-count":

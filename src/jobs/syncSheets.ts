@@ -77,8 +77,6 @@ export async function syncUnsyncedToSheets(
 	db: Database,
 	accessors: SheetAccessors,
 ): Promise<void> {
-	if (!config.googleSheets.enabled) return;
-
 	const unsyncedPlayers = db.getUnsyncedPlayerData();
 	const unsyncedAverages = db.getUnsyncedDailyAverages();
 
@@ -124,11 +122,6 @@ export async function fullSyncToSheets(
 	db: Database,
 	accessors: SheetAccessors,
 ): Promise<void> {
-	if (!config.googleSheets.enabled) {
-		logger.error("Google Sheets is not enabled");
-		return;
-	}
-
 	const { playerSheets, dailyAverageSheets } = accessors;
 
 	logger.info("Starting full sync to Google Sheets...");

@@ -246,9 +246,11 @@ export function createDatabase(dbPath: string): Database {
 		if (ids.length === 0) return;
 		const now = new Date().toISOString();
 		const placeholders = ids.map(() => "?").join(",");
-		db.prepare(
+		const stmt = db.prepare(
 			`UPDATE player_data SET synced_at = ? WHERE id IN (${placeholders})`,
-		).run(now, ...ids);
+		);
+		stmt.run(now, ...ids);
+		stmt.finalize();
 	}
 
 	/**
@@ -324,9 +326,11 @@ export function createDatabase(dbPath: string): Database {
 		if (dates.length === 0) return;
 		const now = new Date().toISOString();
 		const placeholders = dates.map(() => "?").join(",");
-		db.prepare(
+		const stmt = db.prepare(
 			`UPDATE daily_averages SET synced_at = ? WHERE date IN (${placeholders})`,
-		).run(now, ...dates);
+		);
+		stmt.run(now, ...dates);
+		stmt.finalize();
 	}
 
 	/**
