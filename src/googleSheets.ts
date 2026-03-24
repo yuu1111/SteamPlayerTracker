@@ -307,6 +307,8 @@ export function createSheetAccessor<T>(
 					requestBody: { values },
 				}),
 			);
+
+			headerVerified = true;
 		} catch (error) {
 			throw new Error(
 				`Failed to replace all records in Google Sheets: ${error instanceof Error ? error.message : "Unknown error"}`,

@@ -30,11 +30,9 @@ const defaultConfig: ChartConfig = {
 };
 
 /**
- * @description チャート出力先ディレクトリを算出
+ * @description チャート出力先ディレクトリ
  */
-function getChartsDir(): string {
-	return resolve(dirname(config.storage.dbPath), "charts");
-}
+const chartsDir = resolve(dirname(config.storage.dbPath), "charts");
 
 /**
  * @description プレイヤー数チャートを生成
@@ -98,7 +96,7 @@ async function generatePlayerCountChart(
 	};
 
 	const imageBuffer = await canvas.renderToBuffer(configuration);
-	const outputPath = resolve(getChartsDir(), `player_count_${days}days.png`);
+	const outputPath = resolve(chartsDir, `player_count_${days}days.png`);
 	await fs.writeFile(outputPath, imageBuffer);
 	logger.info(`Player count chart saved to ${outputPath}`);
 }
@@ -182,7 +180,7 @@ async function generateDailyAverageChart(
 	};
 
 	const imageBuffer = await canvas.renderToBuffer(configuration);
-	const outputPath = resolve(getChartsDir(), `daily_average_${days}days.png`);
+	const outputPath = resolve(chartsDir, `daily_average_${days}days.png`);
 	await fs.writeFile(outputPath, imageBuffer);
 	logger.info(`Daily average chart saved to ${outputPath}`);
 }
@@ -200,7 +198,7 @@ async function generateAllCharts(): Promise<void> {
 
 	try {
 		logger.info("Starting chart generation...");
-		await fs.mkdir(getChartsDir(), { recursive: true });
+		await fs.mkdir(chartsDir, { recursive: true });
 
 		await generatePlayerCountChart(1, db, canvas);
 		await generatePlayerCountChart(7, db, canvas);
@@ -233,7 +231,7 @@ async function runSingleChart(
 		height: defaultConfig.height,
 		backgroundColour: defaultConfig.backgroundColor,
 	});
-	await fs.mkdir(getChartsDir(), { recursive: true });
+	await fs.mkdir(chartsDir, { recursive: true });
 	await fn(days, db, canvas);
 	process.exit(0);
 }

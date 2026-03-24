@@ -239,18 +239,32 @@ export function createDatabase(dbPath: string): Database {
 	}
 
 	/**
+	 * @description 指定テーブルのレコードを同期済みに更新
+	 * @param table - テーブル名
+	 * @param column - キーカラム名
+	 * @param values - 更新対象の値配列
+	 */
+	function markSyncedByColumn(
+		table: string,
+		column: string,
+		values: (number | string)[],
+	): void {
+		if (values.length === 0) return;
+		const now = new Date().toISOString();
+		const placeholders = values.map(() => "?").join(",");
+		const stmt = db.prepare(
+			`UPDATE ${table} SET synced_at = ? WHERE ${column} IN (${placeholders})`,
+		);
+		stmt.run(now, ...values);
+		stmt.finalize();
+	}
+
+	/**
 	 * @description プレイヤーデータを同期済みに更新
 	 * @param ids - 更新対象のID配列
 	 */
 	function markPlayerDataSynced(ids: number[]): void {
-		if (ids.length === 0) return;
-		const now = new Date().toISOString();
-		const placeholders = ids.map(() => "?").join(",");
-		const stmt = db.prepare(
-			`UPDATE player_data SET synced_at = ? WHERE id IN (${placeholders})`,
-		);
-		stmt.run(now, ...ids);
-		stmt.finalize();
+		markSyncedByColumn("player_data", "id", ids);
 	}
 
 	/**
@@ -323,14 +337,7 @@ export function createDatabase(dbPath: string): Database {
 	 * @param dates - 更新対象の日付配列
 	 */
 	function markDailyAveragesSynced(dates: string[]): void {
-		if (dates.length === 0) return;
-		const now = new Date().toISOString();
-		const placeholders = dates.map(() => "?").join(",");
-		const stmt = db.prepare(
-			`UPDATE daily_averages SET synced_at = ? WHERE date IN (${placeholders})`,
-		);
-		stmt.run(now, ...dates);
-		stmt.finalize();
+		markSyncedByColumn("daily_averages", "date", dates);
 	}
 
 	/**
