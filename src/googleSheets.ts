@@ -122,20 +122,24 @@ export function createSheetAccessor<T>(
 		const headerRange = `${sheetName}!A1:${lastCol}1`;
 
 		try {
-			const response = await sheets.spreadsheets.values.get({
-				spreadsheetId,
-				range: headerRange,
-			});
+			const response = await rateLimitedRequest(() =>
+				sheets.spreadsheets.values.get({
+					spreadsheetId,
+					range: headerRange,
+				}),
+			);
 
 			const values = response.data.values;
 			const firstCell = values?.[0]?.[0];
 			if (!values || values.length === 0 || firstCell !== headers[0]) {
-				await sheets.spreadsheets.values.update({
-					spreadsheetId,
-					range: headerRange,
-					valueInputOption: "RAW",
-					requestBody: { values: [headers] },
-				});
+				await rateLimitedRequest(() =>
+					sheets.spreadsheets.values.update({
+						spreadsheetId,
+						range: headerRange,
+						valueInputOption: "RAW",
+						requestBody: { values: [headers] },
+					}),
+				);
 			}
 			headerVerified = true;
 		} catch (error) {
@@ -159,10 +163,12 @@ export function createSheetAccessor<T>(
 	async function findRowByKey(key: string): Promise<number | null> {
 		const sheets = await sheetsPromise;
 		try {
-			const response = await sheets.spreadsheets.values.get({
-				spreadsheetId,
-				range: `${sheetName}!A:A`,
-			});
+			const response = await rateLimitedRequest(() =>
+				sheets.spreadsheets.values.get({
+					spreadsheetId,
+					range: `${sheetName}!A:A`,
+				}),
+			);
 
 			const values = response.data.values;
 			if (!values || values.length <= 1) return null;

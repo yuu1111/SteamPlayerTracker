@@ -120,11 +120,11 @@ describe("syncUnsyncedToSheets", () => {
 		expect(mockBatchAppend).toHaveBeenCalledTimes(1);
 	});
 
-	it("未同期日次平均がある場合にbatchAppendが呼ばれる", async () => {
+	it("未同期日次平均がある場合にappend(upsert)が呼ばれる", async () => {
 		sharedDb.upsertDailyAverage(sampleDailyAverageRow("2024-06-01"));
 
 		await syncUnsyncedToSheets(sharedDb, testAccessors);
-		expect(mockBatchAppend).toHaveBeenCalled();
+		expect(mockAppend).toHaveBeenCalled();
 	});
 
 	it("Sheets APIエラー時にcatchされてthrowしない", async () => {

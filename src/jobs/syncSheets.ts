@@ -101,7 +101,10 @@ export async function syncUnsyncedToSheets(
 			logger.info(
 				`Syncing ${unsyncedAverages.length} daily average records to Sheets`,
 			);
-			await dailyAverageSheets.batchAppend(unsyncedAverages);
+			// 日次平均は再計算で既存行が更新される可能性があるためupsert(append)を使用
+			for (const record of unsyncedAverages) {
+				await dailyAverageSheets.append(record);
+			}
 			db.markDailyAveragesSynced(unsyncedAverages.map((r) => r.date));
 			logger.info(`Synced ${unsyncedAverages.length} daily average records`);
 		}
