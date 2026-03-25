@@ -8,91 +8,86 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Install dependencies
-        run: npm ci
-        
+        run: bun install --frozen-lockfile
+
       - name: Run type check
-        run: npm run typecheck
-        
+        run: bun run typecheck
+
       - name: Run linter
-        run: npm run lint
-        
+        run: bunx biome ci .
+
+      - name: Run tests
+        run: STEAM_APP_ID=730 DB_PATH=data/test.db bun test
+
       - name: Build application
-        run: npm run build
-        
+        run: bun run build
+
       - name: Create Release Archive
         run: |
-          # Create directory with proper name for archives
           ARCHIVE_NAME="steam-player-tracker-${{ github.ref_name }}"
           mkdir -p "${ARCHIVE_NAME}"
           cp -r dist/ "${ARCHIVE_NAME}/"
           cp package.json "${ARCHIVE_NAME}/"
-          cp package-lock.json "${ARCHIVE_NAME}/"
+          cp bun.lock "${ARCHIVE_NAME}/"
           cp README.md "${ARCHIVE_NAME}/"
           cp README-JP.md "${ARCHIVE_NAME}/"
           cp CHANGELOG.md "${ARCHIVE_NAME}/"
           cp CHANGELOG-JP.md "${ARCHIVE_NAME}/"
-          cp LICENCE.txt "${ARCHIVE_NAME}/"
-          cp *.sh *.bat *.ps1 "${ARCHIVE_NAME}/" 2>/dev/null || true
-          # Copy .env.example if it exists
+          cp LICENCE "${ARCHIVE_NAME}/"
+
           cp .env.example "${ARCHIVE_NAME}/" 2>/dev/null || true
           tar -czf "${ARCHIVE_NAME}.tar.gz" "${ARCHIVE_NAME}"/
           zip -r "${ARCHIVE_NAME}.zip" "${ARCHIVE_NAME}"/
-        
+
       - name: Extract version from tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-        
+
       - name: Generate Release Notes
         id: release_notes
         run: |
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-          echo "## 🚀 Steam Player Tracker v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          echo "## Steam Player Tracker v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          
-          # Extract version-specific changes from CHANGELOG.md
+
           if [ -f "CHANGELOG.md" ]; then
-            echo "### 📝 Changes in this version" >> $GITHUB_OUTPUT
+            echo "### Changes in this version" >> $GITHUB_OUTPUT
             echo "" >> $GITHUB_OUTPUT
-            # Extract unreleased section if this is the first release of those changes
             awk '/^## \[Unreleased\]/{flag=1; next} /^## \[/{flag=0} flag && /^### /{print "#### " substr($0,5)} flag && /^- /{print $0}' CHANGELOG.md >> $GITHUB_OUTPUT
             echo "" >> $GITHUB_OUTPUT
           fi
-          
-          echo "### 📦 Downloads" >> $GITHUB_OUTPUT
+
+          echo "### Downloads" >> $GITHUB_OUTPUT
           echo "- \`steam-player-tracker-${{ github.ref_name }}.tar.gz\` - For Linux/macOS" >> $GITHUB_OUTPUT
           echo "- \`steam-player-tracker-${{ github.ref_name }}.zip\` - For Windows" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 🔧 Installation" >> $GITHUB_OUTPUT
+          echo "### Installation" >> $GITHUB_OUTPUT
           echo "1. Download and extract the archive" >> $GITHUB_OUTPUT
           echo "2. Create and configure \`.env\` file" >> $GITHUB_OUTPUT
-          echo "3. Run \`npm install\` to install dependencies" >> $GITHUB_OUTPUT
-          echo "4. Run \`npm start\` to start the application" >> $GITHUB_OUTPUT
+          echo "3. Run \`bun install\` to install dependencies" >> $GITHUB_OUTPUT
+          echo "4. Run \`bun run start\` to start the application" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 📋 Requirements" >> $GITHUB_OUTPUT
-          echo "- Node.js 18.0.0 or higher" >> $GITHUB_OUTPUT
-          echo "- npm" >> $GITHUB_OUTPUT
+          echo "### Requirements" >> $GITHUB_OUTPUT
+          echo "- Bun 1.3.11 or higher" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 📖 Documentation" >> $GITHUB_OUTPUT
+          echo "### Documentation" >> $GITHUB_OUTPUT
           echo "For setup and usage instructions, see [README.md](README.md) (English) or [README-JP.md](README-JP.md) (日本語)." >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "For complete change history, see [CHANGELOG.md](CHANGELOG.md) (English) or [CHANGELOG-JP.md](CHANGELOG-JP.md) (日本語)." >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-        
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:

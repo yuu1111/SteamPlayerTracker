@@ -1,178 +1,77 @@
-# CLAUDE.MD
+# プロジェクト概要
 
-このファイルは、このリポジトリでコードを扱う際のClaude Code (claude.ai/code)へのガイダンスを提供します。
+Steamゲームの同時接続プレイヤー数を定期取得し、SQLiteに記録、オプションでGoogle Sheetsに同期するBun製TypeScriptアプリケーション。
 
-**言語**: このリポジトリで作業する際は、ユーザーと日本語でコミュニケーションを取ってください。
-
-**Git操作**:
-- git commitやgit pushコマンドを実行する前に、必ずユーザーの明示的な確認を取ってください
-- ユーザーの承認なしに、「タスクを完了して」などの指示があっても、変更をコミットやプッシュしないでください
-- コミットの準備ができたら、「これらの変更をコミット・プッシュしてもよろしいですか？」と確認してください
-
-**コミットメッセージ形式**: 適切なプレフィックスを使用したconventional commitフォーマットを使用してください：
-- `feat:` 新機能
-- `fix:` バグ修正
-- `docs:` ドキュメント更新
-- `style:` フォーマット変更
-- `refactor:` コードリファクタリング
-- `test:` テスト追加
-- `chore:` メンテナンスタスク
-
-例: `feat: 自動リリースシステムを追加` または `fix: ESLint警告を解決`
-
-**リリース管理**:
-- リリースを作成する際は、必ずCHANGELOG.mdとCHANGELOG-JP.mdを適切なバージョン番号で更新してください
-- **未リリースの変更には「## [X.X.X] - YYYY-MM-DD JST」のプレースホルダー形式を使用**し、「Unreleased」は使用しないでください
-- X.X.Xを実際のバージョン番号に置き換えるのは、リリース作成時のみです
-- リリースプロセス中に変更のタイプ（patch/minor/major）に基づいてバージョン番号を決定してください
-- 公式リリースまでCHANGELOGはプレースホルダー形式を使用してください
-- リリースコミットと機能コミットにはconventional commitフォーマットを使用してください
-- **重要**: CHANGELOGの全ての日付はJST（日本標準時）形式である必要があります
-- 日付形式: "YYYY-MM-DD JST"（例: "2025-06-24 JST"）
-
-**リリースプロセスワークフロー**:
-1. **全ての開発作業を完了**し、全てのコミットがプッシュされていることを確認
-2. **自動リリースコマンドを実行**:
-   ```bash
-   npm run release          # パッチリリース（1.0.0 → 1.0.1）
-   npm run release:minor    # マイナーリリース（1.0.0 → 1.1.0）
-   npm run release:major    # メジャーリリース（1.0.0 → 2.0.0）
-   ```
-   これにより自動的に：
-   - 依存関係をクリーンアップして再ビルド
-   - 型チェックとリンティングを実行
-   - package.jsonのバージョンを更新
-   - リリースコミットとGitタグを作成
-3. **CHANGELOGプレースホルダーを実際のバージョンとJST日付に更新**:
-   - "## [X.X.X] - YYYY-MM-DD JST" → "## [1.2.0] - 2025-06-25 JST"に置換
-   - CHANGELOG.mdとCHANGELOG-JP.mdの両方を更新
-4. **新機能が追加された場合はREADMEドキュメントを更新**:
-   - 機能リスト、使用例、コマンドリファレンスを更新
-   - README.mdとREADME-JP.mdの両方が同期されていることを確認
-5. **ドキュメント更新をコミット**:
-   ```bash
-   git add CHANGELOG.md CHANGELOG-JP.md README.md README-JP.md
-   git commit -m "docs: vX.X.Xリリースドキュメントを最終化"
-   ```
-6. **リリースをリモートにプッシュ**:
-   ```bash
-   git push origin main      # リリースコミットをプッシュ
-   git push origin vX.X.X    # バージョンタグをプッシュ
-   ```
-7. **GitHub Actionsが自動的にリリース成果物を作成**（tar.gzとzipファイル）
-
-## 開発コマンド
+# 開発コマンド
 
 ```bash
-# ビルドと実行
-npm run build              # TypeScriptをdist/にコンパイル
-npm start                  # コンパイル済みアプリケーションを実行
-npm run dev                # ts-nodeで開発モード実行
-
-# 開発ツール
-npm run watch              # ウォッチモードコンパイル
-npm run clean              # distディレクトリをクリーン
-npm run lint               # ESLint静的解析
-npm run typecheck          # TypeScript型チェック
-npm run setup              # 依存関係インストールとビルド
-
-# データ管理ツール
-npm run calculate-daily-averages  # 手動日次平均計算ツール
-npm run sync-google-sheets        # 手動CSV-Google Sheets同期
-
-# リリース管理
-npm run release            # パッチリリース（1.0.0 → 1.0.1）
-npm run release:minor      # マイナーリリース（1.0.0 → 1.1.0）
-npm run release:major      # メジャーリリース（1.0.0 → 2.0.0）
-npm run prerelease         # リリース前テスト実行
-npm run test:ci            # CIテストスイート（型チェック + リント）
-npm run prepare-release    # 完全なリリース準備
-
-# プラットフォーム固有スクリプト
-# Windows: build.bat, start.bat, setup.bat, sync-google-sheets.bat
-# Windows (PowerShell): build.ps1, start.ps1, setup.ps1, sync-google-sheets.ps1
-# Linux/macOS: build.sh, start.sh, setup.sh, sync-google-sheets.sh
+bun install          # 依存関係インストール
+bun run dev          # watchモードで開発実行
+bun run build        # dist/にビルド (Bun.build)
+bun run typecheck    # TypeScript型チェック (tsc --noEmit)
+bun run lint         # Biomeによるlintチェック
+bun run format       # Biomeによるフォーマット適用 (--write --unsafe)
+bun run start        # ビルド済みファイルを実行
+bun run test         # bun testで全テスト実行
 ```
 
-## アーキテクチャ概要
+品質管理は`typecheck`、`lint`、`test`で行う。テストは`tests/`にsrc/のミラー構造で配置。
 
-**メインクラス**: `SteamPlayerTracker` (src/steamPlayerTracker.ts) - 全サービスを統制する中央コーディネーター
+# リリース
 
-**サービス指向設計**:
-- `SteamApiService`: Steam Web APIから現在のプレイヤー数を取得
-- `CsvWriter`: データ永続化のためのCSVファイル操作を処理
-- `GoogleSheetsService`: クラウドストレージのための直接Google Sheets統合
-- `QueuedGoogleSheetsService`: リトライキュー付きレート制限対応Google Sheetsサービス
-- `DailyAverageService`: 最大/最小追跡付き日次プレイヤー数平均を計算・管理
-- `Scheduler`: cronベースのデータ収集と日次計算を管理
-- `RetryHandler`: 指数関数的バックオフリトライロジックを実装
-- `Logger`: ファイルローテーション付きWinstonベースログ
+```bash
+bun run release              # パッチバージョン (1.0.0 → 1.0.1)
+bun run release:minor        # マイナーバージョン
+bun run release:major        # メジャーバージョン
+```
 
-**データフロー**: Steam API → データ収集 → 並列ストレージ（キュー付きCSV + Google Sheets） → 拡張日次平均計算（平均/最大/最小とタイムスタンプ）
+リリーススクリプトがバージョン更新、CHANGELOG同期、gitタグ作成を自動化する。
 
-## 設定システム
+# ツールコマンド
 
-設定は`src/config/config.ts`でバリデーション付きdotenvを使用した環境ベースです：
+ツールは`src/tools/`にあり、ビルドせずBunで直接実行する。
 
-**必須**: `.env.example`を`.env`にコピーして設定：
-- `STEAM_APP_ID`: 追跡するSteamゲームApp ID
-- `COLLECTION_MINUTES`: データ収集のためのカンマ区切り分（例："0,30"）
-- `DAILY_AVERAGE_HOUR`: 日次平均計算時刻（0-23）
+```bash
+bun run import-csv           # 既存CSVデータをSQLiteにインポート
+bun run export-csv           # SQLiteデータをCSVにエクスポート
+bun run generate-charts      # チャート画像生成
+```
 
-**出力設定**:
-- `CSV_OUTPUT_ENABLED`: CSVファイル出力の有効/無効（デフォルト: true）
-- `CSV_FILE_PATH`: メインプレイヤーデータCSVファイルのパス
-- `DAILY_AVERAGE_CSV_ENABLED`: 日次平均CSV出力の有効/無効（デフォルト: true）
-- `DAILY_AVERAGE_CSV_FILE_PATH`: 日次平均CSVファイルのパス
+# アーキテクチャ
 
-**リトライとログ設定**:
-- `MAX_RETRIES`: API呼び出しの最大リトライ回数（デフォルト: 3）
-- `RETRY_BASE_DELAY`: リトライロジックの基本遅延（ミリ秒、デフォルト: 1000）
-- `LOG_LEVEL`: ログレベル（debug/info/warn/error、デフォルト: info）
-- `LOG_FILE_PATH`: ログファイル出力のパス
+## ランタイム・ツールチェイン
 
-**オプショナルGoogle Sheets統合**:
-- `GOOGLE_SHEETS_ENABLED=true`に設定
-- `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`を設定
-- `GOOGLE_SHEETS_SHEET_NAME`: プレイヤーデータのシート名（デフォルト: PlayerData）
-- `GOOGLE_SHEETS_DAILY_AVERAGE_SHEET_NAME`: 日次平均のシート名（デフォルト: DailyAverages）
-- `GOOGLE_SHEETS_SYNC_ON_STARTUP`: 起動時にCSVデータをシートに同期（デフォルト: false）
-- Google Sheets API アクセス権限を持つGoogle Cloudサービスアカウントが必要
+- **ランタイム**: Bun (Node.jsではない)
+- **ビルド**: Bun.build (ESM, コード分割有効) - `scripts/build.ts`
+- **Lint/Format**: Biome (`@yuu1111/biome-config`を継承)
+- **型チェック**: TypeScript 5.9 strict (`@yuu1111/tsconfig`を継承, `noEmit: true`)
+- **バリデーション**: Zod (設定、API応答)
+- **ストレージ**: SQLite (`bun:sqlite`, 依存ゼロ)
 
-## 主要実装詳細
+## ソースコード構成
 
-**エラーハンドリング**:
-- Steam APIが0プレイヤーを返す場合、失敗したリクエストとして扱いリトライをトリガー
-- Google Sheets APIレート制限失敗は自動リトライのためキューに追加
-- QueuedGoogleSheetsServiceが指数関数的バックオフで一時的失敗を処理
+- `src/main.ts` - エントリーポイント。依存を直接組み立て、setIntervalで毎分スケジュール実行
+- `src/config.ts` - 環境変数をZodスキーマでパースし設定オブジェクトを生成
+- `src/db.ts` - SQLiteデータベース初期化、マイグレーション、クエリヘルパー
+- `src/logger.ts` - 軽量構造化ロガー (JSON stdout出力)
+- `src/retry.ts` - 指数バックオフ付きリトライハンドラ
+- `src/googleSheets.ts` - 汎用Google Sheetsアクセサ (SheetAccessor<T>)
+- `src/schemas/` - Zodバリデーションスキーマ (Steam API, Google認証情報)
+- `src/jobs/` - cronジョブ (collectData, dailyAverage, syncSheets)
+- `src/tools/` - CLIツール (importCsv, exportCsv, generateCharts)
+- `scripts/` - ビルド・リリーススクリプト (TypeScript, Bunで直接実行)
 
-**起動時動作**:
-1. 起動時の即座データ収集
-2. Steam API接続性の検証
-3. 欠損日次平均の確認と計算
-4. オプショナルCSV-Google Sheets同期（GOOGLE_SHEETS_SYNC_ON_STARTUP=trueの場合）
-5. 継続的収集と日次計算のスケジュール
+## 設計パターン
 
-**ファイル構造**:
-- `src/index.ts`: アプリケーションエントリーポイント
-- `src/config/`: 設定管理とバリデーション
-- `src/services/`: 全ビジネスロジックサービス
-  - `steamApi.ts`: Steam Web API統合
-  - `csvWriter.ts`: CSVファイル操作
-  - `googleSheets.ts`: 直接Google Sheets統合
-  - `queuedGoogleSheets.ts`: リトライキュー付きレート制限対応Google Sheets
-  - `dailyAverageService.ts`: 最大/最小追跡付き日次統計計算
-  - `scheduler.ts`: cronベーススケジューリングシステム
-- `src/tools/`: コマンドラインユーティリティ
-  - `calculateAllDailyAverages.ts`: 手動日次平均計算
-  - `syncGoogleSheets.ts`: CSV-Google Sheets同期ツール
-- `src/types/`: TypeScript型定義
-- `src/utils/`: 共有ユーティリティ（ログ、リトライロジック）
+- **設定管理**: 全設定は`.env`経由。Zodの判別共用体(discriminated union)でGoogle Sheets有効/無効を型安全に分岐
+- **ストレージ**: SQLite (WALモード, prepared statements)。日次平均はSQLクエリで計算
+- **Google Sheets同期**: DB駆動 (`synced_at IS NULL` で未同期レコードを追跡)。プロセス再起動でもデータ損失なし
+- **依存注入**: サービスコンテナなし。main.tsで組み立てて関数引数で渡す
+- **リトライ**: 指数バックオフ (5倍乗数, 最大30秒)
+- **グレースフルシャットダウン**: シグナルリスナーでcronジョブ解除 + DB close
+- **ロギング**: 構造化JSON (stdout出力, ファイル出力はプロセスマネージャに委譲)
 
-**データストレージ**:
-- **メインCSV**: timestamp,player_count形式
-- **日次平均CSV**: date,average_player_count,sample_count,max_player_count,max_timestamp,min_player_count,min_timestampの拡張形式
-- 日次平均は0値を除外（API失敗）
-- **Google Sheets**: 別シート（PlayerData + DailyAverages）でCSV構造をミラー
-- **レート制限処理**: QueuedGoogleSheetsServiceがAPIクォータとリトライを管理
-- **手動同期**: データ不整合解決のための`npm run sync-google-sheets`
+## CI/CD
+
+- `.github/workflows/ci.yml` - push/PRで`typecheck` → `lint` → `build`を実行
+- `.github/workflows/release.yml` - `v*`タグでGitHubリリース作成 (tar.gz/zip)
