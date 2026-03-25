@@ -88,7 +88,7 @@ function main() {
 		}
 	}
 
-	runCommand("bun run clean", "Cleaning dist directory");
+	runCommand("rm -rf dist", "Cleaning dist directory");
 	runCommand("bun run build", "Building");
 
 	const newVersion = updateVersion(versionType);
