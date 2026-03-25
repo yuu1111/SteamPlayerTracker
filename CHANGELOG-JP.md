@@ -7,6 +7,55 @@
 
 **言語:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
 
+## [2.0.0] - 2026-03-25 JST
+
+### 破壊的変更
+- **ランタイム**: Node.js → Bun に完全移行。`bun install` / `bun run` で実行
+- **ストレージ**: CSV ファイル → SQLite (WAL モード) に全面移行。データは `data/tracker.db` に保存
+- **ビルド**: tsc → Bun.build (ESM, コード分割有効) に変更
+- **Lint/Format**: ESLint + Prettier → Biome に統一
+- **モジュール**: CommonJS → ESM に変更
+- **ロガー**: Winston → 構造化JSON stdout ロガーに置換。ファイル出力はプロセスマネージャに委譲
+- **スケジューラ**: node-cron → setInterval ベースのスケジューリングに変更
+- **設定**: dotenv 手動パース → Zod スキーマバリデーションに変更。判別共用体で Google Sheets 有効/無効を型安全に分岐
+
+### 追加
+- **SQLite ストレージ**: bun:sqlite による依存ゼロのデータベース。WAL モード、prepared statements、トランザクション対応
+- **Zod バリデーション**: 設定、Steam API レスポンスの型安全なバリデーション
+- **CSV インポート/エクスポートツール**: 既存 CSV データと SQLite 間の双方向変換 (`bun run import-csv` / `bun run export-csv`)
+- **テストスイート**: bun test による 114 テスト、カバレッジ 97%
+- **DB 駆動の Google Sheets 同期**: `synced_at IS NULL` で未同期レコードを追跡。プロセス再起動でもデータ損失なし
+- **日次平均同期の batchAppend**: N 回の API コール → 1 回に削減
+- **並行実行ガード**: setInterval の重複実行を防止
+- **グレースフルシャットダウン**: シグナルリスナーで cron ジョブ解除 + DB close
+- **リリーススクリプト TypeScript 化**: release.cjs → scripts/release.ts
+
+### 変更
+- **アーキテクチャ全面刷新**: クラスベースのサービス → 関数ベース/ファクトリパターンに変換
+- **依存注入**: サービスコンテナなし。main.ts で組み立てて関数引数で渡すシンプルな DI
+- **Google Sheets アクセサ**: 汎用 SheetAccessor\<T> による型安全な Sheets 操作
+- **リトライ**: 指数バックオフ (5倍乗数, 最大30秒) に統一
+- **CI/CD**: Node.js/npm → Bun に移行。`typecheck` → `lint` → `build` のパイプライン
+- **ツール実行**: ビルド不要、Bun で TypeScript を直接実行
+- **日次平均同期**: upsert (append) 方式で重複行を防止
+- **TypeScript 5.9 strict モード**: `@yuu1111/tsconfig` 継承、using 宣言対応
+
+### 削除
+- **CSV ストレージ**: SQLite に完全置換
+- **Winston ロガー**: 軽量構造化ロガーに置換
+- **node-cron**: setInterval に置換
+- **ESLint / Prettier**: Biome に統一
+- **bat/sh/ps1 起動スクリプト**: 削除
+- **steamApi.ts**: retry.ts に統合・簡素化
+- **@types/node**: @types/bun に置換
+
+### 修正
+- 日次平均 sync の重複行防止 (upsert 化)
+- API レート制限の統一的なハンドリング
+- チャートの日付範囲境界の修正
+- DDL null ガード修正
+- markSynced の statement finalize 安全化
+
 ## [1.3.0] - 2025-06-25 JST
 
 ### 追加

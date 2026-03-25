@@ -5,7 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)  
+**Languages:** [English](CHANGELOG.md) | [日本語](CHANGELOG-JP.md)
+
+## [2.0.0] - 2026-03-25 JST
+
+### Breaking Changes
+- **Runtime**: Migrated from Node.js to Bun. Use `bun install` / `bun run` to execute
+- **Storage**: Migrated from CSV files to SQLite (WAL mode). Data stored in `data/tracker.db`
+- **Build**: Replaced tsc with Bun.build (ESM, code splitting enabled)
+- **Lint/Format**: Replaced ESLint + Prettier with Biome
+- **Module**: Migrated from CommonJS to ESM
+- **Logger**: Replaced Winston with lightweight structured JSON stdout logger. File output delegated to process managers
+- **Scheduler**: Replaced node-cron with setInterval-based scheduling
+- **Config**: Replaced manual dotenv parsing with Zod schema validation. Discriminated unions for type-safe Google Sheets enabled/disabled branching
+
+### Added
+- **SQLite storage**: Zero-dependency database via bun:sqlite. WAL mode, prepared statements, transaction support
+- **Zod validation**: Type-safe validation for config and Steam API responses
+- **CSV import/export tools**: Bidirectional conversion between existing CSV data and SQLite (`bun run import-csv` / `bun run export-csv`)
+- **Test suite**: 114 tests via bun test with 97% coverage
+- **DB-driven Google Sheets sync**: Tracks unsynced records via `synced_at IS NULL`. No data loss on process restart
+- **Daily average sync batchAppend**: Reduced N API calls to 1
+- **Concurrent execution guard**: Prevents overlapping setInterval executions
+- **Graceful shutdown**: Signal listeners to cancel cron jobs and close DB
+- **TypeScript release script**: Converted release.cjs to scripts/release.ts
+
+### Changed
+- **Full architecture overhaul**: Converted class-based services to function-based/factory patterns
+- **Dependency injection**: No service container. Assembled in main.ts and passed via function arguments
+- **Google Sheets accessor**: Type-safe Sheets operations via generic SheetAccessor\<T>
+- **Retry**: Unified exponential backoff (5x multiplier, max 30s)
+- **CI/CD**: Migrated from Node.js/npm to Bun. Pipeline: `typecheck` → `lint` → `build`
+- **Tool execution**: No build required, TypeScript executed directly via Bun
+- **Daily average sync**: Upsert (append) approach to prevent duplicate rows
+- **TypeScript 5.9 strict mode**: Inherits `@yuu1111/tsconfig`, `using` declarations supported
+
+### Removed
+- **CSV storage**: Fully replaced by SQLite
+- **Winston logger**: Replaced by lightweight structured logger
+- **node-cron**: Replaced by setInterval
+- **ESLint / Prettier**: Replaced by Biome
+- **bat/sh/ps1 startup scripts**: Removed
+- **steamApi.ts**: Consolidated into retry.ts
+- **@types/node**: Replaced by @types/bun
+
+### Fixed
+- Prevented duplicate rows in daily average sync (upsert)
+- Unified API rate limit handling
+- Fixed chart date range boundaries
+- Fixed DDL null guard
+- Fixed markSynced statement finalize safety
 
 ## [1.3.0] - 2025-06-25 JST
 
